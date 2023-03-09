@@ -1,0 +1,89 @@
+body {
+    background-color: #e9ecef;
+}
+
+#gameWindow {
+    margin: auto;
+}
+
+.container {
+    display: flex;
+}
+
+.grid {
+    outline-color: mediumpurple;
+    outline-style: outset;
+    outline-width: thick;
+    width: 200px;
+    height: 400px;
+    display: flex;
+    flex-wrap: wrap;
+    background-color: yellow;
+}
+
+.grid div {
+    height: 20px;
+    width: 20px;
+}
+
+.title {
+    margin-left: 100px;
+    resize: 100px;
+    font-family: cursive;
+}
+
+.tetromino {
+    outline-color: grey;
+    outline-style: outset;
+    outline-width: thin;
+}
+
+.info-box {
+    outline-color: purple;
+    outline-style: inset;
+    outline-width: medium;
+    margin-top: 50px;
+    margin-left: 20px;
+    width: 180px;
+    height: 300px;
+    background-color: #ccb3ff;
+}
+
+.score {
+    text-align: center;
+}
+
+.startButton {
+    text-align: center;
+}
+
+.leftButton {
+    text-align: center;
+}
+
+.rightButton {
+    text-align: center;
+}
+
+.rotateButton {
+    text-align: center;
+}
+
+.instructions {
+    text-align: center;
+}
+
+.mini-grid {
+    margin-top: 30px;
+    margin-left: 50px;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    flex-wrap: wrap;
+    background-color: yellow;
+}
+
+.mini-grid div {
+    height: 20px;
+    width: 20px;
+}
