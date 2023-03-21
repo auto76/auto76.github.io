@@ -30,7 +30,7 @@ times_won = {
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("lotterySim\templates\index.html")
 
 @app.route("/calculate", methods=["POST"])
 def calc_win_amt(my_numbers, winning_numbers):
