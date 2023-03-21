@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request
 import random
 import json
+
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
@@ -29,7 +30,7 @@ times_won = {
 
 @app.route("/")
 def index():
-    return render_template("index.html", times_won=times_won)
+    return render_template("index.html")
 
 @app.route("/calculate", methods=["POST"])
 def calc_win_amt(my_numbers, winning_numbers):
