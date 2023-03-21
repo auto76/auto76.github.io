@@ -1,0 +1,12 @@
+% extends "layout.html" %
+
+{% block body %}
+
+    <h1>Play here</h1>
+    <form action="/calcWin" method="post">
+        <input name="tickets" placeholder="How many tickets" type="number">
+        <input name="drawings" placeholder="Number of drawings" type="number">
+        <input type="submit" value="Calculate Win">
+    </form>
+
+{% endblock %}
