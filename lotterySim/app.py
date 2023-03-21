@@ -2,6 +2,7 @@ import random
 import json
 from flask import Flask, render_template, request
 
+app = Flask(__name__)
 
 white_possibles = list(range(1, 70))
 
