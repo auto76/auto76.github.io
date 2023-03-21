@@ -1,6 +1,6 @@
+from flask import Flask, render_template, request
 import random
 import json
-from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
