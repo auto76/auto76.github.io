@@ -1,12 +1,16 @@
-{% extends "layout.html" %}
+{<!DOCTYPE html>
 
-{% block body %}
-
-    <h1>Play here</h1>
-    <form action="/calcWin" method="post">
-        <input name="tickets" placeholder="How many tickets" type="number">
-        <input name="drawings" placeholder="Number of drawings" type="number">
-        <input type="submit" value="Calculate Win">
-    </form>
-
-{% endblock %}
+    <html lang="en">
+        <head>
+            <meta name="viewport" content="initail-scale=1, width=device-width">
+            <title>Powerball Simulator</title>
+        </head>
+        <body>
+            <h1>Play here</h1>
+            <form action="/calcWin" method="post">
+                <input name="tickets" placeholder="How many tickets" type="number">
+                <input name="drawings" placeholder="Number of drawings" type="number">
+                <input type="submit" value="Calculate Win">
+            </form>
+        </body>
+    </html>
