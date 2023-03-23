@@ -32,53 +32,52 @@ times_won = {
 def index():
     return render_template("lotterySim\templates\index.html")
 
-@app.route("/calcWin", methods=["POST"])
-def calc_win_amt(my_numbers, winning_numbers):
-    win_amt = 0
+@app.route("/calculate", methods=["GET", "POST"])
+def calculate(my_numbers, winning_numbers):
+    if request.method == "POST":
+        win_amt = 0
 
-    white_matches = len(my_numbers["whites"].intersection(winning_numbers["whites"]))
-    power_match = my_numbers["red"] == winning_numbers["red"]
-
-    if white_matches == 5:
-        if power_match:
-            win_amt = 2_000_000_000
-            times_won["5+P"] += 1
-        else:
-            win_amt = 1_000_000
-            times_won["5"] =+ 1
-    elif white_matches == 4:
-        if power_match:
-            win_amt = 50_000
-            times_won["4+P"] += 1
-        else:
-            win_amt = 100
-            times_won["4"] += 1
-    elif white_matches == 3:
-        if power_match:
-            win_amt = 100
-            times_won["3+P"] += 1
-        else:
+        white_matches = len(my_numbers["whites"].intersection(winning_numbers["whites"]))
+        power_match = my_numbers["red"] == winning_numbers["red"]
+        if white_matches == 5:
+            if power_match:
+                win_amt = 2_000_000_000
+                times_won["5+P"] += 1
+            else:
+                win_amt = 1_000_000
+                times_won["5"] =+ 1
+        elif white_matches == 4:
+            if power_match:
+                win_amt = 50_000
+                times_won["4+P"] += 1
+            else:
+                win_amt = 100
+                times_won["4"] += 1
+        elif white_matches == 3:
+            if power_match:
+                win_amt = 100
+                times_won["3+P"] += 1
+            else:
+                win_amt = 7
+                times_won["3"] += 1
+        elif white_matches == 2 and power_match:
             win_amt = 7
-            times_won["3"] += 1
-    elif white_matches == 2 and power_match:
-        win_amt = 7
-        times_won["2+P"] += 1
-    elif white_matches == 1 and power_match:
-        win_amt = 4
-        times_won["1+P"] += 1
-    elif power_match:
-        win_amt = 4
-        times_won["P"] += 1
-    else:
-        times_won["0"] += 1
+            times_won["2+P"] += 1
+        elif white_matches == 1 and power_match:
+            win_amt = 4
+            times_won["1+P"] += 1
+        elif power_match:
+            win_amt = 4
+            times_won["P"] += 1
+        else:
+            times_won["0"] += 1
 
-    return win_amt
+        return win_amt
+    for drawing in range(num_drawings):
+        white_drawing = set(random.sample(white_possibles, k=5))
+        red_drawing = random.choice(red_possibles)
 
-for drawing in range(num_drawings):
-    white_drawing = set(random.sample(white_possibles, k=5))
-    red_drawing = random.choice(red_possibles)
-
-    winning_numbers = {"whites": white_drawing, "red": red_drawing}
+        winning_numbers = {"whites": white_drawing, "red": red_drawing}
 
     for ticket in range(tickets_per_drawing):
         total_spent += 2
@@ -87,10 +86,14 @@ for drawing in range(num_drawings):
 
         my_numbers = {"whites": my_whites, "red": my_red}
 
-        win_amt = calc_win_amt(my_numbers, winning_numbers)
+        win_amt = calculate(my_numbers, winning_numbers)
         earnings += win_amt
 
-print(f'Spent: ${total_spent}')
-print(f'Earnings: ${earnings}')
+        return render_template('index.html', win_amt=win_amt)   
+    else: 
+        return None
 
-print(json.dumps(times_won, indent=2))
+
+# print(f'Earnings: ${earnings}')
+
+# print(json.dumps(times_won, indent=2))
