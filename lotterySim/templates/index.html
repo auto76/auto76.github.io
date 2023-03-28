@@ -3,6 +3,8 @@
     <html lang="en">
         <head>
             <meta name="viewport" content="initail-scale=1, width=device-width">
+            <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+            <script defer src="https://pyscript.net/latest/pyscript.js"></script>
             <title>Powerball Simulator</title>
         </head>
         <body>
@@ -11,10 +13,7 @@
                 <input name="tickets" placeholder="How many tickets" type="number">
                 <input name="drawings" placeholder="Number of drawings" type="number">
                 <input type="submit" value="Calculate Win">
-            </form>
-
-            {% if win_amt %}
-                <p>You won {{win_amt}}</p>
-            {% endif %}
+            </form>            
+            <py-script src="lotterySim\app.py"></py-script>
         </body>
     </html>

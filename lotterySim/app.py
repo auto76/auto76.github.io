@@ -89,11 +89,11 @@ def calculate(my_numbers, winning_numbers):
         win_amt = calculate(my_numbers, winning_numbers)
         earnings += win_amt
 
-        return render_template('index.html', win_amt=win_amt)   
+        print(f'Spent: ${total_spent}')
+        print(f'Earnings: ${earnings}')
+        print(json.dumps(times_won, indent=2))   
     else: 
         return None
 
+# return render_template('calculation.html', win_amt=win_amt)
 
-# print(f'Earnings: ${earnings}')
-
-# print(json.dumps(times_won, indent=2))
