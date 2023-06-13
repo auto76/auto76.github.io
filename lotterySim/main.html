@@ -9,100 +9,101 @@
 <body>
     <h1>Powerball Simulator</h1>
     <p>Below are the simulated results of playing the Power Ball lottery. In the simulation the player is purchasing 100 tickets for every drawing, 
-    and playing every drawing for 100 years. The Jackpot will stay at $2,000,000,000 the record high.</p>
+    and playing every drawing for 100 years. The Grand Prize will stay at $2,000,000,000 the record high.</p>
     <p>The results will show how many times the player won in all the different winning categories, how much money the 
     player spent in total, and how much was won in total.</p>
-    <p>Everytime you refresh the page it will run the simulation again. See if you can win the Jackpot.</p>
-    <p>Output:</p>
-    <p id="output"></p>
-    <py-script>
-        import random
-        import json
+    <p>Everytime you refresh the page it will run the simulation again. The odds of winning the Grand Prize is 1 in 292,201,338. See if you can win the Grand Prize.</p>
+    <div id="output">
+        <p>Output:</p>    
+        <py-script>
+            import random
+            import json
 
-        white_possibles = list(range(1, 69))
+            white_possibles = list(range(1, 69))
 
-        red_possibles = list(range(1, 26))
+            red_possibles = list(range(1, 26))
 
-        tickets_per_drawing = 100
-        num_drawings = 15600
+            tickets_per_drawing = 100
+            num_drawings = 15600
 
-        total_spent = 0
-        earnings = 0
+            total_spent = 0
+            earnings = 0
 
-        times_won = {
-            "5 white balls + Powerball": 0,
-            "5 white balls": 0,
-            "4 white balls + Powerball": 0,
-            "4 white balls": 0,
-            "3 white balls + Powerball": 0,
-            "3 white balls": 0,
-            "2 white balls + Powerball": 0,
-            "1 white balls + Powerball": 0,
-            "1 Powerball": 0,
-            "0 matching numbers": 0,
-            }
+            times_won = {
+                "5 white balls + Powerball": 0,
+                "5 white balls": 0,
+                "4 white balls + Powerball": 0,
+                "4 white balls": 0,
+                "3 white balls + Powerball": 0,
+                "3 white balls": 0,
+                "2 white balls + Powerball": 0,
+                "1 white balls + Powerball": 0,
+                "1 Powerball": 0,
+                "0 matching numbers": 0,
+                }
 
-        def calc_win_amt(my_numbers, winning_numbers):
-            win_amt = 0
+            def calc_win_amt(my_numbers, winning_numbers):
+                win_amt = 0
 
-            white_matches = len(my_numbers["whites"].intersection(winning_numbers["whites"]))
-            power_match = my_numbers["red"] == winning_numbers["red"]
+                white_matches = len(my_numbers["whites"].intersection(winning_numbers["whites"]))
+                power_match = my_numbers["red"] == winning_numbers["red"]
 
-            if white_matches == 5:
-                if power_match:
-                    win_amt = 2_000_000_000
-                    times_won["5 white balls + Powerball"] += 1
-                else:
-                    win_amt = 1_000_000
-                    times_won["5 white balls"] =+ 1
-            elif white_matches == 4:
-                if power_match:
-                    win_amt = 50_000
-                    times_won["4 white balls + Powerball"] += 1
-                else:
-                    win_amt = 100
-                    times_won["4 white balls"] += 1
-            elif white_matches == 3:
-                if power_match:
-                    win_amt = 100
-                    times_won["3 white balls + Powerball"] += 1
-                else:
+                if white_matches == 5:
+                    if power_match:
+                        win_amt = 2_000_000_000
+                        times_won["5 white balls + Powerball"] += 1
+                    else:
+                        win_amt = 1_000_000
+                        times_won["5 white balls"] =+ 1
+                elif white_matches == 4:
+                    if power_match:
+                        win_amt = 50_000
+                        times_won["4 white balls + Powerball"] += 1
+                    else:
+                        win_amt = 100
+                        times_won["4 white balls"] += 1
+                elif white_matches == 3:
+                    if power_match:
+                        win_amt = 100
+                        times_won["3 white balls + Powerball"] += 1
+                    else:
+                        win_amt = 7
+                        times_won["3 white balls"] += 1
+                elif white_matches == 2 and power_match:
                     win_amt = 7
-                    times_won["3 white balls"] += 1
-            elif white_matches == 2 and power_match:
-                win_amt = 7
-                times_won["2 white balls + Powerball"] += 1
-            elif white_matches == 1 and power_match:
-                win_amt = 4
-                times_won["1 white balls + Powerball"] += 1
-            elif power_match:
-                win_amt = 4
-                times_won["1 Powerball"] += 1
-            else:
-                times_won["0 matching numbers"] += 1
+                    times_won["2 white balls + Powerball"] += 1
+                elif white_matches == 1 and power_match:
+                    win_amt = 4
+                    times_won["1 white balls + Powerball"] += 1
+                elif power_match:
+                    win_amt = 4
+                    times_won["1 Powerball"] += 1
+                else:
+                    times_won["0 matching numbers"] += 1
 
-            return win_amt
+                return win_amt
 
-        for drawing in range(num_drawings):
-            white_drawing = set(random.sample(white_possibles, k=5))
-            red_drawing = random.choice(red_possibles)
+            for drawing in range(num_drawings):
+                white_drawing = set(random.sample(white_possibles, k=5))
+                red_drawing = random.choice(red_possibles)
 
-            winning_numbers = {"whites": white_drawing, "red": red_drawing}
+                winning_numbers = {"whites": white_drawing, "red": red_drawing}
 
-            for ticket in range(tickets_per_drawing):
-                total_spent += 2
-                my_whites = set(random.sample(white_possibles, k=5))
-                my_red = random.choice(red_possibles)
+                for ticket in range(tickets_per_drawing):
+                    total_spent += 2
+                    my_whites = set(random.sample(white_possibles, k=5))
+                    my_red = random.choice(red_possibles)
 
-                my_numbers = {"whites": my_whites, "red": my_red}
+                    my_numbers = {"whites": my_whites, "red": my_red}
 
-                win_amt = calc_win_amt(my_numbers, winning_numbers)
-                earnings += win_amt
+                    win_amt = calc_win_amt(my_numbers, winning_numbers)
+                    earnings += win_amt
 
-        print(f'Spent: ${total_spent}')
-        print(f'Earnings: ${earnings}')
+            print(f'Spent: ${total_spent}')
+            print(f'Earnings: ${earnings}')
 
-        print(json.dumps(times_won, indent=2))
-	</py-script>
+            print(json.dumps(times_won, indent=2))
+        </py-script>
+    </div>
 </body>
 </html>
