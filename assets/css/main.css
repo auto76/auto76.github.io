@@ -4687,3 +4687,30 @@ input, select, textarea {
 		}
 
 	}
+	#videoPlayer1 {
+		outline-color: purple;
+		outline-style: inset;
+		outline-width: medium;
+		margin-left: 50px;
+		margin-right: 50px;
+		background-color: #ccb3ff;
+	}
+	
+	.desktop{
+		width:100%;
+		height:100%;
+		display:block;
+	}
+	.mobile{
+		display:none;
+	}
+	@media only screen and (max-width: 600px) {
+		.desktop{
+			display:none;
+		}
+		.mobile{
+			width:100%;
+			height:100%;
+			display:block;
+		}
+	}
