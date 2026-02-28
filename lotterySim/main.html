@@ -32,7 +32,7 @@
     <p>Everytime you refresh the page it will run the simulation again. The odds of winning the Grand Prize is 1 in 292,201,338. See if you can win the Grand Prize.</p>
     <div id="output">
         <p>Output:</p>    
-        <py-script>
+        <script type="py">
             import random
             import json
 
@@ -120,7 +120,7 @@
             print(f'Earnings: ${earnings}')
 
             print(json.dumps(times_won, indent=2))
-        </py-script>
+        </script>
     </div>
 </body>
 </html>
