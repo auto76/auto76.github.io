@@ -30,15 +30,49 @@
     <p>The results will show how many times the player won in all the different winning categories, how much money the 
     player spent in total, and how much was won in total.</p>
     <p>Everytime you refresh the page it will run the simulation again. The odds of winning the Grand Prize is 1 in 292,201,338. See if you can win the Grand Prize.</p>
-    <div id="output">
-        <p>Output:</p>    
-        <script type="py">
-            import random
-            import json
+    <div class="container text-center mt-4">
 
-            white_possibles = list(range(1, 69))
+    <button id="runBtn" class="btn btn-primary mb-3">
+        Run Simulation
+    </button>
 
-            red_possibles = list(range(1, 26))
+    <div id="spinner" class="mb-3" style="display:none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Running simulation...</p>
+    </div>
+
+    <div id="progressText" class="mb-2"></div>
+
+    <div id="output"></div>
+
+        </div>
+
+        <script type="mpy">
+        import asyncio
+        import random
+        import json
+        from pyscript import document
+
+        white_possibles = list(range(1, 69))
+        red_possibles = list(range(1, 26))
+
+        def pick_5_unique_numbers():
+            nums = set()
+            while len(nums) < 5:
+                nums.add(random.randint(1, 68))
+            return nums
+        async def run_simulation(event):
+
+            run_btn = document.querySelector("#runBtn")
+            spinner = document.querySelector("#spinner")
+            output_div = document.querySelector("#output")
+
+            # Disable button and show spinner
+            run_btn.disabled = True
+            spinner.style.display = "block"
+            output_div.innerHTML = ""
 
             tickets_per_drawing = 100
             num_drawings = 15600
@@ -54,14 +88,13 @@
                 "3 white balls + Powerball": 0,
                 "3 white balls": 0,
                 "2 white balls + Powerball": 0,
-                "1 white balls + Powerball": 0,
+                "1 white ball + Powerball": 0,
                 "1 Powerball": 0,
                 "0 matching numbers": 0,
-                }
+            }
 
             def calc_win_amt(my_numbers, winning_numbers):
                 win_amt = 0
-
                 white_matches = len(my_numbers["whites"].intersection(winning_numbers["whites"]))
                 power_match = my_numbers["red"] == winning_numbers["red"]
 
@@ -71,7 +104,7 @@
                         times_won["5 white balls + Powerball"] += 1
                     else:
                         win_amt = 1_000_000
-                        times_won["5 white balls"] =+ 1
+                        times_won["5 white balls"] += 1
                 elif white_matches == 4:
                     if power_match:
                         win_amt = 50_000
@@ -91,7 +124,7 @@
                     times_won["2 white balls + Powerball"] += 1
                 elif white_matches == 1 and power_match:
                     win_amt = 4
-                    times_won["1 white balls + Powerball"] += 1
+                    times_won["1 white ball + Powerball"] += 1
                 elif power_match:
                     win_amt = 4
                     times_won["1 Powerball"] += 1
@@ -100,26 +133,48 @@
 
                 return win_amt
 
-            for drawing in range(num_drawings):
-                white_drawing = set(random.sample(white_possibles, k=5))
-                red_drawing = random.choice(red_possibles)
 
+            progress_text = document.querySelector("#progressText")
+
+            for drawing in range(num_drawings):
+
+                white_drawing = pick_5_unique_numbers()
+                red_drawing = random.choice(red_possibles)
                 winning_numbers = {"whites": white_drawing, "red": red_drawing}
 
                 for ticket in range(tickets_per_drawing):
                     total_spent += 2
-                    my_whites = set(random.sample(white_possibles, k=5))
-                    my_red = random.choice(red_possibles)
+                    my_numbers = {
+                        "whites": pick_5_unique_numbers(),
+                        "red": random.choice(red_possibles),
+                    }
+                    earnings += calc_win_amt(my_numbers, winning_numbers)
 
-                    my_numbers = {"whites": my_whites, "red": my_red}
+                # Update progress every 200 drawings
+                if drawing % 200 == 0:
+                    percent = int((drawing / num_drawings) * 100)
+                    progress_text.innerHTML = f"Progress: {percent}%"
+                    await asyncio.sleep(0)   # Allow UI to refresh
 
-                    win_amt = calc_win_amt(my_numbers, winning_numbers)
-                    earnings += win_amt
+            # Hide spinner and re-enable button
+            spinner.style.display = "none"
+            run_btn.disabled = False
+            
+            formatted_results = ""
+            for key in sorted(times_won):
+                formatted_results += f"{key:<30} {times_won[key]}\n"
+            
+            output_div.innerHTML = f"""
+                <h3>Results</h3>
+                <p><strong>Total Spent:</strong> ${total_spent:,}</p>
+                <p><strong>Total Won:</strong> ${earnings:,}</p>
+                <pre>{formatted_results}</pre>
+            """
+            progress_text.innerHTML = "Progress: 100%"
 
-            print(f'Spent: ${total_spent}')
-            print(f'Earnings: ${earnings}')
+        # Attach click event
+        document.querySelector("#runBtn").addEventListener("click", run_simulation)
 
-            print(json.dumps(times_won, indent=2))
         </script>
     </div>
 </body>
