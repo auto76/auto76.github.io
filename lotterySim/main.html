@@ -141,7 +141,7 @@
                 white_drawing = pick_5_unique_numbers()
                 red_drawing = random.choice(red_possibles)
                 winning_numbers = {"whites": white_drawing, "red": red_drawing}
-                
+
                 for ticket in range(tickets_per_drawing):
                     total_spent += 2
                     my_numbers = {
@@ -149,30 +149,29 @@
                         "red": random.choice(red_possibles),
                     }
                     earnings += calc_win_amt(my_numbers, winning_numbers)
-                
+
                 # Update progress every 200 drawings
                 if drawing % 200 == 0:
                     percent = int((drawing / num_drawings) * 100)
                     progress_text.innerHTML = f"Progress: {percent}%"
-                    await asyncio.sleep(0)
-                    
+                    await asyncio.sleep(0)   # Allow UI to refresh
+
             # Hide spinner and re-enable button
             spinner.style.display = "none"
             run_btn.disabled = False
-            progress_text.innerHTML = "Progress: 100%"
-                
-                
-            formatted_results = "" 
-            for key in sorted(times_won): 
+            
+            formatted_results = ""
+            for key in sorted(times_won):
                 formatted_results += f"{key:<30} {times_won[key]}\n"
-                
+            
             output_div.innerHTML = f"""
                 <h3>Results</h3>
                 <p><strong>Total Spent:</strong> ${total_spent:,}</p>
                 <p><strong>Total Won:</strong> ${earnings:,}</p>
                 <pre>{formatted_results}</pre>
             """
-                
+            progress_text.innerHTML = "Progress: 100%"
+
         # Attach click event
         document.querySelector("#runBtn").addEventListener("click", run_simulation)
 
