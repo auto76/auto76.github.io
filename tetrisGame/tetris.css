@@ -1,6 +1,5 @@
 body {
     background-color: #1c1f26;
-   /* background-color: #e9ecef; */
 }
 
 #main {
@@ -23,7 +22,20 @@ h1.title {
 }
 
 #gameWindow {
-    margin: auto;
+    min-height: calc(100vh - 140px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+#gameWindow .container {
+    display: flex;
+    /* Align board and info box perfectly */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
 }
 
 .container {
@@ -48,7 +60,6 @@ h1.title {
 
 .title {
     text-align: center;
-    /* margin-left: 100px; */
     resize: 100px;
     font-family: cursive;
     color: hsl(283, 95%, 8%);
@@ -65,65 +76,72 @@ h1.title {
     margin-right: 50px;    
 }
 
+/* =========================================================
+   INFO BOX — HEIGHT BALANCED TO MATCH CANVAS
+   - Reduced vertical spacing
+   - Prevents overflow
+   - Visually proportional to board
+========================================================= */
+
 .info-box {
-    outline-color: purple;
-    outline-style: inset;
-    outline-width: medium;
-    margin-top: 50px;
-    margin-bottom: 50px;
-    margin-left: 20px;
-    width: 180px;
-    height: 700px;
+
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+
+    padding: 12px 14px;
+
+    min-width: 240px;
+    max-width: 260px;
+
     background-color: #dbd2fa;
-    color: hsl(283, 95%, 8%);
+    border: 2px solid #4b3ca7;
+    border-radius: 16px;
+
+    gap: 6px;              /* smaller internal spacing */
+
     flex-shrink: 0;
 }
 
 .holdBox {
     text-align: center;
+    margin-top: 5px;
+}
+
+.hold-title {
+    margin-top: 4px;      /* smaller above hold */
+    margin-bottom: 4px;
 }
 
 .holdBox canvas {
     display: block;
-    margin-bottom: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
     background-color: #ffff00;
 }
 
-#hold-button {
+.instructions {
+    margin-top: 10px;
     margin-bottom: 10px;
-}  
+}
 
 .score {
     text-align: center;
+    margin-bottom: 2px;   /* smaller below score */
 }
 
-.startButton {
-    text-align: center;
+.level-counter {
+    margin-top: 4px;      /* smaller above level */
+    margin-bottom: 4px;   /* smaller below level */
 }
-
-/*
-.t-leftButton {
-    text-align: center;
-}
-
-.t-rightButton {
-    text-align: center;
-}
-
-.t-rotateButton {
-    text-align: center;
-}  */
 
 .instructions {
     text-align: center;
 }
 
 .mini-grid {
-    margin-top: 30px;
-    /* margin-left: 50px; */
+    margin-top: 10px;
     width: 80px;
     height: 80px;
     display: flex;
@@ -143,7 +161,9 @@ h1.title {
 
 .t-controls {
     width: 100%;
-    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .t-row {
@@ -157,35 +177,84 @@ h1.title {
     justify-content: center;
 }
 
-.t-btn {
-    width: 48px;
-    height: 48px;
-    font-size: 20px;
-    font-weight: bold;
+/* ==============================
+   BASE BUTTON STYLE (SHARED LOOK)
+================================= */
+
+.t-btn,
+#start-button,
+#hold-button {
+
+    /* Remove fixed size */
+    min-width: 60px;
+    min-height: 48px;
+    padding: 10px 16px;
+
+    font-size: 16px;
+    font-weight: 600;
+
     border-radius: 10px;
     border: 2px solid #4b3ca7;
-    background-color: #2b214d;
-    color: #ffffff;
+
+    background: linear-gradient(145deg, #2b214d, #3c2f6b);
+    color: white;
+
     cursor: pointer;
     transition: all 0.15s ease;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.t-btn:hover {
-    background-color: #3c2f6b;
+/* Directional buttons stay square */
+.t-btn {
+    width: 52px;
+    height: 52px;
+    padding: 0;
 }
 
-.t-btn:active {
+/* Larger control buttons */
+#start-button,
+#hold-button {
+    width: auto;
+    height: auto;
+}
+
+.t-btn:hover,
+#start-button:hover,
+#hold-button:hover {
+    transform: translateY(-2px);
+}
+
+.t-btn:active,
+#start-button:active,
+#hold-button:active {
     transform: scale(0.92);
 }
 
-button:focus {
-    outline: none;
+.dpad {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 9999;
 }
 
-button:active {
-    transform: scale(0.95);
+@media (pointer: coarse) {
+    .dpad {
+        display: flex;
+    }
 }
 
+.middle-row {
+    display: flex;
+    gap: 8px;
+}
+ 
 /* ================================
    MOBILE FRIENDLY LAYOUT
 ================================ */
@@ -218,5 +287,17 @@ button:active {
         width: 44px;
         height: 44px;
         font-size: 18px;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .dpad {
+        display: flex;
+    }
+
+    #gameWindow .container {
+        flex-direction: column;
+        gap: 20px;
     }
 }

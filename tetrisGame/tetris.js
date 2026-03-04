@@ -39,6 +39,14 @@ class Tetris {
         this.scoreEl = document.getElementById("score")
         this.levelEl = document.getElementById("level")
 
+        /* =============================
+           LOCAL HIGH SCORE SYSTEM
+           ============================= */
+
+        this.highScoreEl = document.getElementById("highScore")
+        this.highScore = this.loadHighScore()
+        this.highScoreEl.innerText = this.highScore
+
         this.state = "stopped" // running | paused | stopped | gameover
 
         /* =============================
@@ -64,6 +72,16 @@ class Tetris {
         }
 
         this.score = 0
+             
+        /* =============================
+           LINE CLEAR ANIMATION STATE (not working)
+           ============================= */
+        
+        this.clearingRows = []        // rows currently animating
+        this.clearAnimationTime = 0   // animation timer
+        this.clearDuration = 300      // milliseconds  
+        
+
         this.lines = 0
         this.level = 1
         this.dropInterval = 1000
@@ -88,6 +106,16 @@ class Tetris {
         this.reset()
 
         this.update()
+
+        /* =============================
+           GAMEPAD SUPPORT INIT
+           ============================= */
+        this.gamepadIndex = null
+        this.gamepadButtons = {}
+        window.addEventListener("gamepadconnected", (e) => {
+            console.log("Gamepad connected")
+            this.gamepadIndex = e.gamepad.index
+        })
     }
 
     /* ==========================================================
@@ -99,20 +127,20 @@ class Tetris {
     }
 
     /* ==========================================================
-    TRUE RESPONSIVE CANVAS SCALING
-    - Fits BOTH width and height
-    - No cropping
-    ========================================================== */
+       TRUE RESPONSIVE CANVAS SCALING
+       - Fits BOTH width and height
+       - No cropping
+       ========================================================== */
 
     resizeCanvas() {
 
-        const maxWidth = window.innerWidth * 0.6
-        const maxHeight = window.innerHeight * 0.75
+        const maxWidth = window.innerWidth * 0.55
+        const maxHeight = window.innerHeight * 0.65
 
         const blockFromWidth = Math.floor(maxWidth / this.COLS)
         const blockFromHeight = Math.floor(maxHeight / this.ROWS)
 
-        this.BLOCK = Math.max(15,
+        this.BLOCK = Math.max(18,
             Math.min(blockFromWidth, blockFromHeight)
         )
 
@@ -326,8 +354,8 @@ class Tetris {
     }
 
     /* ==========================================================
-    DAS / ARR MOVEMENT SYSTEM
-    ========================================================== */
+       DAS / ARR MOVEMENT SYSTEM
+       ========================================================== */
 
     startMove(dir) {
 
@@ -366,10 +394,16 @@ class Tetris {
         this.active.pos.y++
 
         if (!this.valid(this.active.matrix, this.active.pos)) {
+
             this.active.pos.y--
             this.merge()
+
             this.clearLines()
-            this.spawn()
+
+            /* If no animation triggered, spawn immediately */
+            if (this.state !== "clearing") {
+                this.spawn()
+            }
         }
 
         this.dropCounter = 0
@@ -384,10 +418,13 @@ class Tetris {
 
         this.merge()
         this.clearLines()
-        this.spawn()
+
+        if (this.state !== "clearing") {
+            this.spawn()
+        }
 
         this.dropCounter = 0
-    }  
+    }
 
     /*  GHOST FUNCTION  */
     getGhostPosition() {
@@ -432,38 +469,58 @@ class Tetris {
     }  
 
     /* ==========================================================
-   LINE CLEAR SYSTEM (FULL SAFE REBUILD METHOD)
-   - No index shifting
-   - No async mutation corruption
-   - No stuck white rows
-   ========================================================== */
+       LINE CLEAR WITH FLASH ANIMATION 
+       - Detect full rows
+       - Animate before removing
+       - Prevent board corruption
+       ========================================================== */
 
     clearLines() {
 
-        let newBoard = []
-        let linesCleared = 0
+        const rowsToClear = []
 
-        // Build new board without full rows
+        // Detect full rows
         for (let y = 0; y < this.ROWS; y++) {
-
             if (this.board[y].every(cell => cell !== 0)) {
-                linesCleared++
-            } else {
+                rowsToClear.push(y)
+            }
+        }
+
+        if (rowsToClear.length === 0) return
+
+        /* ---- Trigger animation instead of immediate removal ---- */
+
+        this.clearingRows = rowsToClear
+        this.clearAnimationTime = 0
+
+        // Pause piece spawning until animation finishes
+        this.state = "clearing"
+    }
+        
+    /* ==========================================================
+       FINALIZE LINE CLEAR AFTER ANIMATION
+       ========================================================== */
+
+    finishLineClear() {
+
+        let newBoard = []
+        let linesCleared = this.clearingRows.length
+
+        // Rebuild board without cleared rows
+        for (let y = 0; y < this.ROWS; y++) {
+            if (!this.clearingRows.includes(y)) {
                 newBoard.push(this.board[y])
             }
         }
 
-        if (linesCleared === 0) return
-
-        // Add empty rows at top
         while (newBoard.length < this.ROWS) {
             newBoard.unshift(Array(this.COLS).fill(0))
         }
 
-        // Replace entire board at once (no splice)
         this.board = newBoard
+        this.clearingRows = []
 
-        /* ----- scoring ----- */
+        /* ---- SCORING ---- */
         const scoreTable = {1:100,2:300,3:500,4:800}
 
         this.score += scoreTable[linesCleared] * this.level
@@ -474,11 +531,37 @@ class Tetris {
 
         this.scoreEl.innerText = this.score
         this.levelEl.innerText = this.level
+
+        this.saveHighScore()   // check for new high score
+    }
+
+    /* ==========================================================
+       LOAD HIGH SCORE FROM BROWSER STORAGE
+       ========================================================== */
+    loadHighScore() {
+
+        const saved = localStorage.getItem("tetrisHighScore")
+
+        return saved ? parseInt(saved) : 0
+    }
+
+    /* ==========================================================
+       SAVE HIGH SCORE IF CURRENT SCORE EXCEEDS IT
+       ========================================================== */
+    saveHighScore() {
+
+        if (this.score > this.highScore) {
+
+            this.highScore = this.score
+            localStorage.setItem("tetrisHighScore", this.highScore)
+
+            this.highScoreEl.innerText = this.highScore
+        }
     }
 
     /* ==========================================================
        PREVIEW NEXT PIECE  
-        ========================================================== */
+       ========================================================== */
 
     fillNextQueue() {
         while (this.nextQueue.length < 3) {
@@ -494,8 +577,8 @@ class Tetris {
     }   
 
     /* ==========================================================
-   NEXT PIECE PREVIEW (FULL CLEAR EACH FRAME)
-   ========================================================== */
+       NEXT PIECE PREVIEW (FULL CLEAR EACH FRAME)
+       ========================================================== */
 
     drawNextPreview() {
 
@@ -572,7 +655,23 @@ class Tetris {
         this.ctx.fillRect(0, 0,
             this.canvas.width, this.canvas.height)
 
-        this.drawMatrix(this.board, { x: 0, y: 0 })  
+        this.drawMatrix(this.board, { x: 0, y: 0 }) 
+        
+        /* ---- FLASH CLEARING ROWS ---- */
+        if (this.clearingRows.length > 0) {
+
+            this.ctx.fillStyle = "white"
+
+            this.clearingRows.forEach(row => {
+
+                this.ctx.fillRect(
+                    0,
+                    row * this.BLOCK,
+                    this.canvas.width,
+                    this.BLOCK
+                )
+            })
+        }  
         
         /*  GHOST FUNCTION  */
         const ghostY = this.getGhostPosition()
@@ -581,12 +680,6 @@ class Tetris {
         this.drawMatrix(this.active.matrix,
             { x: this.active.pos.x, y: ghostY })
         this.ctx.globalAlpha = 1 
-        
-        /* Not working SMOOTH DROP EASING Remove before prompt
-        this.drawMatrix(
-            this.active.matrix,
-            { x:this.active.pos.x,
-            y:Math.floor(this.active.pos.y) }) */
 
         if (this.active)
             this.drawMatrix(this.active.matrix,
@@ -595,6 +688,11 @@ class Tetris {
         if (this.state === "gameover") {
             this.ctx.fillStyle = "rgba(0,0,0,0.7)"
             this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height)
+
+            if (this.state === "gameover" && !this.highScoreSaved) {
+                this.saveHighScore()
+                this.highScoreSaved = true
+            }
 
             this.ctx.fillStyle = "#FFF"
             this.ctx.font = "30px Arial"
@@ -638,22 +736,44 @@ class Tetris {
     }
 
     /* ==========================================================
-       GAME LOOP
+       GAME LOOP (PROPER TIME HANDLING)
+       - Single delta calculation
+       - Drop + animation separated
+       - No freeze
        ========================================================== */
 
     update(time = 0) {
 
+        /* ---- Calculate frame delta ONCE ---- */
+        const delta = time - this.lastTime
+        this.lastTime = time
+
+        /* ---- RUNNING STATE ---- */
         if (this.state === "running") {
 
-            const delta = time - this.lastTime
-            this.lastTime = time
             this.dropCounter += delta
 
-            if (this.dropCounter > this.dropInterval)
+            if (this.dropCounter > this.dropInterval) {
                 this.drop()
+            }
         }
 
+        /* ---- CLEARING ANIMATION STATE ---- */
+        if (this.state === "clearing") {
+
+            this.clearAnimationTime += delta
+
+            if (this.clearAnimationTime >= this.clearDuration) {
+
+                this.finishLineClear()
+                this.spawn()            // IMPORTANT: spawn AFTER clear
+                this.state = "running"
+            }
+        }
+
+        this.pollGamepad()
         this.draw()
+
         requestAnimationFrame(this.update.bind(this))
     }
 
@@ -675,6 +795,7 @@ class Tetris {
 
         this.scoreEl.innerText = 0
         this.levelEl.innerText = 1
+        this.highScoreSaved = false
 
         this.nextQueue = []
         this.fillNextQueue()
@@ -692,6 +813,17 @@ class Tetris {
     }
 
     initControls() {
+
+        /* (REMOVE COMMENT IF RESET BUTTON IS NEEDED) 
+        document.getElementById("resetHighScore")
+            .onclick = () => {
+
+                localStorage.removeItem("tetrisHighScore")
+
+                this.highScore = 0
+                this.highScoreEl.innerText = 0
+            }
+        */
 
         document.getElementById("start-button")
             .onclick = () => {
@@ -745,6 +877,10 @@ class Tetris {
 
             const keys = ["ArrowLeft","ArrowRight","ArrowDown","ArrowUp","Space"]
 
+            if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.key)) {
+                e.preventDefault()
+            }
+
             if (keys.includes(e.key) || e.code === "Space") {
                 e.preventDefault()
             }
@@ -775,7 +911,102 @@ class Tetris {
                 this.hold()
         })
     }
+
+    /* ==========================================================
+    FULL GAMEPAD SUPPORT (Xbox / PS / Generic)
+    - Left Stick = Move
+    - D-Pad = Move
+    - A / Cross = Rotate
+    - B / Circle = Hard Drop
+    - Y / Triangle = Hold
+    - Start = Pause
+    ========================================================== */
+
+    pollGamepad() {
+
+        if (this.gamepadIndex === null) return
+
+        const gamepad = navigator.getGamepads()[this.gamepadIndex]
+        if (!gamepad) return
+
+        const deadZone = 0.4
+
+        /* ---- LEFT / RIGHT ---- */
+        if (gamepad.axes[0] < -deadZone) this.startMove(-1)
+        if (gamepad.axes[0] > deadZone) this.startMove(1)
+
+        /* ---- D-PAD ---- */
+        if (gamepad.buttons[14].pressed) this.startMove(-1)
+        if (gamepad.buttons[15].pressed) this.startMove(1)
+
+        /* ---- SOFT DROP ---- */
+        if (gamepad.buttons[13].pressed) this.drop()
+
+        /* ---- ROTATE ---- */
+        if (gamepad.buttons[0].pressed) this.rotate(1)
+
+        /* ---- HARD DROP ---- */
+        if (gamepad.buttons[1].pressed) this.hardDrop()
+
+        /* ---- HOLD ---- */
+        if (gamepad.buttons[3].pressed) this.hold()
+
+        /* ---- PAUSE ---- */
+        if (gamepad.buttons[9].pressed) this.togglePause()
+    }
 }
 
 document.addEventListener("DOMContentLoaded",
     () => new Tetris())
+
+/* ==========================================================
+   MOBILE D-PAD DRAG WITH BOUNDS + EDGE SNAP
+========================================================== */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const dpad = document.getElementById("mobile-controls")
+    if (!dpad) return
+
+    let isDragging = false
+    let offsetX = 0
+    let offsetY = 0
+
+    dpad.addEventListener("touchstart", (e) => {
+
+        isDragging = true
+
+        offsetX = e.touches[0].clientX - dpad.offsetLeft
+        offsetY = e.touches[0].clientY - dpad.offsetTop
+    })
+
+    dpad.addEventListener("touchmove", (e) => {
+
+        if (!isDragging) return
+
+        let newX = e.touches[0].clientX - offsetX
+        let newY = e.touches[0].clientY - offsetY
+
+        /* ---- Bounds Clamp ---- */
+        newX = Math.max(0, Math.min(window.innerWidth - dpad.offsetWidth, newX))
+        newY = Math.max(0, Math.min(window.innerHeight - dpad.offsetHeight, newY))
+
+        dpad.style.left = newX + "px"
+        dpad.style.top = newY + "px"
+    })
+
+    dpad.addEventListener("touchend", () => {
+
+        isDragging = false
+
+        /* ---- SNAP TO NEAREST SIDE ---- */
+        const midpoint = window.innerWidth / 2
+
+        if (dpad.offsetLeft < midpoint) {
+            dpad.style.left = "20px"
+        } else {
+            dpad.style.left =
+                (window.innerWidth - dpad.offsetWidth - 20) + "px"
+        }
+    })
+})

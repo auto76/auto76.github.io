@@ -73,7 +73,7 @@ input, select, textarea {
 }
 
 /* Basic */
-
+/*
 	@-ms-viewport {
 		width: device-width;
 	}
@@ -323,7 +323,7 @@ input, select, textarea {
 	}
 
 /* Row */
-
+/*
 	.row {
 		display: flex;
 		flex-wrap: wrap;
@@ -2036,7 +2036,7 @@ input, select, textarea {
 		}
 
 /* Box */
-
+/*
 	.box {
 		border: solid 2px;
 		margin-bottom: 2rem;
@@ -2058,9 +2058,9 @@ input, select, textarea {
 	.box {
 		border-color: #eeeeee;
 	}
-
+ 
 /* Button */
-/* Removing buttons because they are causing issue with the Tetris buttons 
+/*
 	input[type="submit"],
 	input[type="reset"],
 	input[type="button"],
@@ -2235,11 +2235,11 @@ input, select, textarea {
 			button.primary:hover,
 			.button.primary:hover {
 				background-color: #18bfef;
-			}                                        */
+			}                                       
 
 
 /* Form */
-
+/*
 	form {
 		margin: 0 0 2rem 0;
 	}
@@ -2588,7 +2588,7 @@ input, select, textarea {
 		}
 
 /* Image */
-
+/*
 	.image {
 		border: 0;
 		display: inline-block;
@@ -2678,7 +2678,7 @@ input, select, textarea {
 		}
 
 /* Actions */
-
+/*
 	ul.actions {
 		display: -moz-flex;
 		display: -webkit-flex;
@@ -2836,7 +2836,7 @@ input, select, textarea {
 		}
 
 /* List */
-
+/*
 	ol {
 		list-style: decimal;
 		margin: 0 0 2rem 0;
@@ -3002,7 +3002,7 @@ input, select, textarea {
 	}
 
 /* Table */
-
+/*
 	.table-wrapper {
 		-webkit-overflow-scrolling: touch;
 		overflow-x: auto;
@@ -3101,7 +3101,7 @@ input, select, textarea {
 	}
 
 /* Pagination */
-
+/*
 	.pagination {
 		display: -moz-inline-flex;
 		display: -webkit-inline-flex;
@@ -3283,7 +3283,7 @@ input, select, textarea {
 		}
 
 /* Intro */
-
+/*
 	#intro {
 		color: #ffffff;
 		padding: 8rem 4rem 6rem 4rem ;

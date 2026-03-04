@@ -1,100 +1,115 @@
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" 
-    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" 
-    integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-    <link href="styles.css" rel="stylesheet">
-    <meta charset="utf-8" />
-    <script src="tetris.js"></script>
-    <link rel="stylesheet" href="tetris.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-	<link rel="stylesheet" href="assets/css/main.css" />
-    <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
-    <title>Basic Tetris</title>
-</head>
-<body class="is-preload">
-    
-    <!-- Wrapper -->
-    <div id="wrapper">
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" 
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+        <link href="styles.css" rel="stylesheet">
+        <meta charset="utf-8" />
+        <script src="tetris.js"></script>
+        <link rel="stylesheet" href="tetris.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        <link rel="stylesheet" href="assets/css/main.css" />
+        <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+        <title>Basic Tetris</title>
+    </head>
+    <body class="is-preload">
         
-    <!-- Header -->
-        <header id="header">
-            <a href="http://devansdigital.com" class="logo">Back to Portfolio</a>
-        </header>
+        <!-- Wrapper -->
+        <div id="wrapper" class="fade-in">
+            
+            <!-- Header -->
+            <header id="header">
+                <a href="http://devansdigital.com" class="logo">Back to Portfolio</a>
+            </header>
 
-    <!-- Main -->>
-        <div id="main">
+            <!-- Main -->
+            <div id="main">
 
-            <!-- Post -->
-            <section class="post">
-                <header class="major">								
+                <!-- Post -->
+                <section class="post">
+                    <header class="major">								
                         <h1 class="title">Basic Tetris</h1>
-                        <div id="gameWindow">
-                            <div class="container">
-                                <div class="keyTips">
-                                    <h4>Key Tips</h4>
-                                    <p>← → : Move</p>
-                                    <p>↓ : Soft Drop</p>
-                                    <p>↑ : Rotate</p>
-                                    <p>Space : Hard Drop</p>
-                                    <p>Shift : Hold</p>
-                                    <p>P : Pause</p>
-                                </div>
-                                <canvas id="tetris" width="300" height="600"></canvas>
-                                <div class="info-box">
-                                    <div class="mini-grid">
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
-                                        <div></div>
+                    </header>
+                            <div id="gameWindow">
+                                <div class="container">
+                                    <div class="keyTips">
+                                        <h4>Key Tips</h4>
+                                        <p>← → : Move</p>
+                                        <p>↓ : Soft Drop</p>
+                                        <p>↑ : Rotate</p>
+                                        <p>Space : Hard Drop</p>
+                                        <p>Shift : Hold</p>
+                                        <p>P : Pause</p>
                                     </div>
-                                    <div class="score">
-                                        <h3 style="font-size:120%;">Score:<span id="score">0</span></h3>
-                                    </div>
-                                    <div class="startButton">
-                                        <button id="start-button">Start/Pause</button>
-                                    </div>
-                                    <p class="instructions" style="font-size:120%;">Click on Start/Pause</p>
-                                    <h3>Level: <span id="level">1</span></h3>
-
-                                    <div class="holdBox">
-                                        <h4>Hold</h4>
-                                        <canvas id="holdCanvas" width="80" height="80"></canvas>
-                                        <button id="hold-button">Hold</button>
-                                    </div>
-                                    
-                                    <div class="t-controls">
-                                    <div class="t-controls">
-                                        <div class="t-row">
-                                            <button id="left-button" class="t-btn">←</button>
-                                            <button id="rotate-button" class="t-btn">⟳</button>
-                                            <button id="right-button" class="t-btn">→</button>
+                                    <canvas id="tetris" width="300" height="600"></canvas>
+                                    <div class="info-box">
+                                        <div class="mini-grid">
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
+                                            <div></div>
                                         </div>
-                                        <div class="t-row t-down-row">
-                                            <button id="down-button" class="t-btn">↓</button>
+                                        <div class="score">
+                                            <h3 style="font-size:100%;">Score:<span id="score">0</span></h3>
                                         </div>
-                                    </div>                                     
+                                        <div class="startButton">
+                                            <button id="start-button">Start/Pause</button>
+                                        </div>                                       
+                                        <p class="instructions" style="font-size:90%;">Click on Start/Pause</p>
+                                        <div class="level-counter">
+                                        <h3 style="font-size:100%;">Level: <span id="level">1</span></h3>
+                                        </div>
+                                        <div class="high-score">
+                                            <h4>High Score: <span id="highScore">0</span></h4>
+                                        </div>
+                                        <!-- If a reset button is needed remove comment -->
+                                        <!-- <button id="resetHighScore">Reset High Score</button> -->
+                                        <div class="holdBox">
+                                            <h4 class="hold-title">Hold</h4>
+                                            <canvas id="holdCanvas" width="80" height="80"></canvas>
+                                            <button id="hold-button">Hold</button>
+                                        </div>
+                                        <div class="t-controls">
+                                            <div class="t-row">
+                                                <button id="left-button" class="t-btn">←</button>
+                                                <button id="rotate-button" class="t-btn">⟳</button>
+                                                <button id="right-button" class="t-btn">→</button>
+                                            </div>
+                                            <div class="t-row t-down-row">
+                                                <button id="down-button" class="t-btn">↓</button>
+                                            </div>
+                                        </div>
+                                        <div id="mobile-controls" class="dpad">
+                                            <button id="m-up" class="t-btn">▲</button>
+                                            <div class="middle-row">
+                                                <button id="m-left" class="t-btn">◀</button>
+                                                <button id="m-down" class="t-btn">▼</button>
+                                                <button id="m-right" class="t-btn">▶</button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                </div>                                    
                             </div>
-                        </div>
+                </section>
+            </div>
+        
 
-        <!-- Footer -->
+            <!-- Footer -->
             <footer id="footer">
                 <section class="split contact">
                     <section>
@@ -111,23 +126,19 @@
                 </section>
             </footer>
 
-        <!-- Copyright -->
+            <!-- Copyright -->
             <div id="copyright">
                 <ul><li>&copy; Daniel Evans</li><li>2023</li></ul>
             </div>
 
+            <!-- Scripts -->
+            <script src="assets/js/jquery.min.js"></script>
+            <script src="assets/js/jquery.scrollex.min.js"></script>
+            <script src="assets/js/jquery.scrolly.min.js"></script>
+            <script src="assets/js/browser.min.js"></script>
+            <script src="assets/js/breakpoints.min.js"></script>
+            <script src="assets/js/util.js"></script>
+            <script src="assets/js/main.js"></script>
         </div>
-
-    </div>
-
-    <!-- Scripts -->
-    <script src="assets/js/jquery.min.js"></script>
-    <script src="assets/js/jquery.scrollex.min.js"></script>
-    <script src="assets/js/jquery.scrolly.min.js"></script>
-    <script src="assets/js/browser.min.js"></script>
-    <script src="assets/js/breakpoints.min.js"></script>
-    <script src="assets/js/util.js"></script>
-    <script src="assets/js/main.js"></script>
-
-</body>
+    </body>
 </html>
