@@ -49,6 +49,10 @@ class Tetris {
 
         this.board = this.createMatrix(this.COLS, this.ROWS)
 
+        this.resizeCanvas()
+        window.addEventListener("resize",
+            () => this.resizeCanvas())
+
         this.colors = {
             I: "#ffffff",
             O: "#00ffd5",
@@ -65,6 +69,11 @@ class Tetris {
         this.dropInterval = 1000
         this.lastTime = 0
         this.dropCounter = 0
+        this.moveIntervals = {}
+
+        this.DAS = 150
+        this.ARR = 30
+        this.keyTimers = {}
 
         this.bag = []
         this.holdPiece = null
@@ -87,6 +96,28 @@ class Tetris {
 
     createMatrix(w, h) {
         return Array.from({ length: h }, () => Array(w).fill(0))
+    }
+
+    /* ==========================================================
+    TRUE RESPONSIVE CANVAS SCALING
+    - Fits BOTH width and height
+    - No cropping
+    ========================================================== */
+
+    resizeCanvas() {
+
+        const maxWidth = window.innerWidth * 0.6
+        const maxHeight = window.innerHeight * 0.75
+
+        const blockFromWidth = Math.floor(maxWidth / this.COLS)
+        const blockFromHeight = Math.floor(maxHeight / this.ROWS)
+
+        this.BLOCK = Math.max(15,
+            Math.min(blockFromWidth, blockFromHeight)
+        )
+
+        this.canvas.width = this.COLS * this.BLOCK
+        this.canvas.height = this.ROWS * this.BLOCK
     }
 
     /* ==========================================================
@@ -221,25 +252,65 @@ class Tetris {
     } 
 
     /* ==========================================================
-       ROTATION WITH BASIC SRS WALL KICKS
-       (Full SRS table shortened here for space clarity)
+       ROTATION WITH TRUE SRS KICK TABLES
        ========================================================== */
 
     rotate(dir) {
 
-        const matrix = this.active.matrix
-        const rotated = this.rotateMatrix(matrix, dir)
+        const type = this.active.type
+        const oldRotation = this.active.rotation
+        const newRotation =
+            (oldRotation + (dir > 0 ? 1 : 3)) % 4
 
-        const pos = this.active.pos
-        const offsets = [0, -1, 1, -2, 2]
+        const rotated =
+            this.rotateMatrix(this.active.matrix, dir)
 
-        for (let offset of offsets) {
-            if (this.valid(rotated, { x: pos.x + offset, y: pos.y })) {
+        const kicks = this.getKickData(
+            type, oldRotation, newRotation)
+
+        for (let [x,y] of kicks) {
+            if (this.valid(rotated, {
+                x:this.active.pos.x + x,
+                y:this.active.pos.y - y
+            })) {
                 this.active.matrix = rotated
-                this.active.pos.x += offset
+                this.active.pos.x += x
+                this.active.pos.y -= y
+                this.active.rotation = newRotation
                 return
             }
         }
+    }
+
+    getKickData(type, from, to) {
+
+        const JLSTZ = {
+            "0>1":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+            "1>0":[[0,0],[1,0],[1,-1],[0,2],[1,2]],
+            "1>2":[[0,0],[1,0],[1,-1],[0,2],[1,2]],
+            "2>1":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+            "2>3":[[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+            "3>2":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+            "3>0":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+            "0>3":[[0,0],[1,0],[1,1],[0,-2],[1,-2]]
+        }
+
+        const I = {
+            "0>1":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+            "1>0":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+            "1>2":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+            "2>1":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+            "2>3":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+            "3>2":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+            "3>0":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+            "0>3":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]]
+        }
+
+        const key = `${from}>${to}`
+
+        if (type === "I") return I[key]
+        if (type === "O") return [[0,0]]
+        return JLSTZ[key]
     }
 
     rotateMatrix(matrix, dir) {
@@ -252,6 +323,38 @@ class Tetris {
         else
             result.reverse()
         return result
+    }
+
+    /* ==========================================================
+    DAS / ARR MOVEMENT SYSTEM
+    ========================================================== */
+
+    startMove(dir) {
+
+        if (this.moveIntervals[dir]) return
+
+        // Initial move instantly
+        this.move(dir)
+
+        // DAS delay
+        const timeout = setTimeout(() => {
+
+            this.moveIntervals[dir] = setInterval(() => {
+                this.move(dir)
+            }, this.ARR)
+
+        }, this.DAS)
+
+        this.moveIntervals[dir] = timeout
+    }
+
+    move(dir) {
+
+        this.active.pos.x += dir
+
+        if (!this.valid(this.active.matrix, this.active.pos)) {
+            this.active.pos.x -= dir
+        }
     }
 
     /* ==========================================================
@@ -284,7 +387,7 @@ class Tetris {
         this.spawn()
 
         this.dropCounter = 0
-    }
+    }  
 
     /*  GHOST FUNCTION  */
     getGhostPosition() {
@@ -329,56 +432,48 @@ class Tetris {
     }  
 
     /* ==========================================================
-       LINE CLEAR + LEVEL SYSTEM
-       ========================================================== */
+   LINE CLEAR SYSTEM (FULL SAFE REBUILD METHOD)
+   - No index shifting
+   - No async mutation corruption
+   - No stuck white rows
+   ========================================================== */
 
     clearLines() {
 
-        let rowsToClear = []
+        let newBoard = []
+        let linesCleared = 0
 
-        outer:
-        for (let y = this.ROWS - 1; y >= 0; y--) {
+        // Build new board without full rows
+        for (let y = 0; y < this.ROWS; y++) {
 
-            for (let x = 0; x < this.COLS; x++) {
-                if (this.board[y][x] === 0)
-                    continue outer
+            if (this.board[y].every(cell => cell !== 0)) {
+                linesCleared++
+            } else {
+                newBoard.push(this.board[y])
             }
-
-            rowsToClear.push(y)
         }
 
-        if (rowsToClear.length === 0) return
+        if (linesCleared === 0) return
 
-        // FLASH
-        rowsToClear.forEach(y => {
-            for (let x = 0; x < this.COLS; x++) {
-                this.board[y][x] = "#FFFFFF"
-            }
-        })
+        // Add empty rows at top
+        while (newBoard.length < this.ROWS) {
+            newBoard.unshift(Array(this.COLS).fill(0))
+        }
 
-        this.draw()
+        // Replace entire board at once (no splice)
+        this.board = newBoard
 
-        setTimeout(() => {
+        /* ----- scoring ----- */
+        const scoreTable = {1:100,2:300,3:500,4:800}
 
-            rowsToClear.forEach(y => {
-                this.board.splice(y, 1)
-                this.board.unshift(Array(this.COLS).fill(0))
-            })
+        this.score += scoreTable[linesCleared] * this.level
+        this.lines += linesCleared
 
-            const cleared = rowsToClear.length
+        this.level = Math.floor(this.lines / 10) + 1
+        this.dropInterval = Math.max(1000 - (this.level - 1) * 75, 80)
 
-            const scoreTable = {1:100,2:300,3:500,4:800}
-
-            this.score += scoreTable[cleared] * this.level
-            this.lines += cleared
-
-            this.level = Math.floor(this.lines / 10) + 1
-            this.dropInterval = Math.max(1000 - (this.level - 1) * 100, 100)
-
-            this.scoreEl.innerText = this.score
-            this.levelEl.innerText = this.level
-
-        }, 120)
+        this.scoreEl.innerText = this.score
+        this.levelEl.innerText = this.level
     }
 
     /* ==========================================================
@@ -398,10 +493,17 @@ class Tetris {
         return piece
     }   
 
-    
+    /* ==========================================================
+   NEXT PIECE PREVIEW (FULL CLEAR EACH FRAME)
+   ========================================================== */
+
     drawNextPreview() {
 
-        this.miniSquares.forEach(c => c.style.backgroundColor = "")
+        // FULL reset of all mini squares
+        this.miniSquares.forEach(square => {
+            square.style.backgroundColor = "transparent"
+            square.style.border = "none"
+        })
 
         const type = this.nextQueue[0]
         if (!type) return
@@ -410,15 +512,23 @@ class Tetris {
 
         matrix.forEach((row, y) => {
             row.forEach((value, x) => {
+
                 if (value !== 0) {
+
                     const index = y * 4 + x
-                    if (this.miniSquares[index])
+
+                    if (this.miniSquares[index]) {
+
                         this.miniSquares[index].style.backgroundColor =
                             this.colors[type]
+
+                        this.miniSquares[index].style.border =
+                            "1px solid #222"
+                    }
                 }
             })
         })
-    } 
+    }
 
     /* ==========================================================
        DRAWING (CANVAS RENDERING)
@@ -462,7 +572,7 @@ class Tetris {
         this.ctx.fillRect(0, 0,
             this.canvas.width, this.canvas.height)
 
-        this.drawMatrix(this.board, { x: 0, y: 0 })
+        this.drawMatrix(this.board, { x: 0, y: 0 })  
         
         /*  GHOST FUNCTION  */
         const ghostY = this.getGhostPosition()
@@ -470,11 +580,17 @@ class Tetris {
         this.ctx.globalAlpha = 0.3
         this.drawMatrix(this.active.matrix,
             { x: this.active.pos.x, y: ghostY })
-        this.ctx.globalAlpha = 1  
+        this.ctx.globalAlpha = 1 
+        
+        /* Not working SMOOTH DROP EASING Remove before prompt
+        this.drawMatrix(
+            this.active.matrix,
+            { x:this.active.pos.x,
+            y:Math.floor(this.active.pos.y) }) */
 
         if (this.active)
             this.drawMatrix(this.active.matrix,
-                            this.active.pos)
+                this.active.pos)  
 
         if (this.state === "gameover") {
             this.ctx.fillStyle = "rgba(0,0,0,0.7)"
@@ -483,12 +599,12 @@ class Tetris {
             this.ctx.fillStyle = "#FFF"
             this.ctx.font = "30px Arial"
             this.ctx.fillText("GAME OVER", 40, 300)
-        }       
+        }   
     } 
 
     drawHold() {
 
-        this.holdCtx.fillStyle = "#111"
+        this.holdCtx.fillStyle = "#ffff00"
         this.holdCtx.fillRect(0,0,80,80)
 
         if (!this.holdPiece) return
@@ -610,7 +726,28 @@ class Tetris {
         document.getElementById("hold-button")
             .onclick = () => this.hold()
 
+        document.addEventListener("keyup", e => {
+
+            if (e.key === "ArrowLeft") {
+                clearTimeout(this.moveIntervals[-1])
+                clearInterval(this.moveIntervals[-1])
+                delete this.moveIntervals[-1]
+            }
+
+            if (e.key === "ArrowRight") {
+                clearTimeout(this.moveIntervals[1])
+                clearInterval(this.moveIntervals[1])
+                delete this.moveIntervals[1]
+            }
+        })
+
         document.addEventListener("keydown", e => {
+
+            const keys = ["ArrowLeft","ArrowRight","ArrowDown","ArrowUp","Space"]
+
+            if (keys.includes(e.key) || e.code === "Space") {
+                e.preventDefault()
+            }
 
             if (e.key.toLowerCase() === "p") {
                 this.togglePause()
@@ -620,14 +757,10 @@ class Tetris {
             if (this.state !== "running") return
 
             if (e.key === "ArrowLeft")
-                this.active.pos.x--,
-                !this.valid(this.active.matrix,
-                this.active.pos) && this.active.pos.x++
+                this.startMove(-1)
 
-            if (e.key === "ArrowRight") 
-                this.active.pos.x++,
-                !this.valid(this.active.matrix,
-                this.active.pos) && this.active.pos.x--
+            if (e.key === "ArrowRight")
+                this.startMove(1)
 
             if (e.key === "ArrowDown")
                 this.drop()
@@ -635,16 +768,11 @@ class Tetris {
             if (e.key === "ArrowUp")
                 this.rotate(1)
 
-            if (e.code === "Space") {
-                e.preventDefault()
+            if (e.code === "Space")
                 this.hardDrop()
-            }
 
             if (e.key === "Shift")
                 this.hold()
-
-            if (e.key.toLowerCase() === "p")
-                this.togglePause()
         })
     }
 }

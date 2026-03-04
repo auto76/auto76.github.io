@@ -1,5 +1,10 @@
 body {
-    background-color: #e9ecef;
+    background-color: #1c1f26;
+   /* background-color: #e9ecef; */
+}
+
+canvas {
+    background-color: #0f1117;
 }
 
 #gameWindow {
@@ -7,7 +12,8 @@ body {
 }
 
 .container {
-    display: flex;
+    display: flex; 
+    justify-content: center;
 }
 
 .grid {
@@ -26,15 +32,22 @@ body {
 }
 
 .title {
-    margin-left: 100px;
+    text-align: center;
+    /* margin-left: 100px; */
     resize: 100px;
     font-family: cursive;
+    color: #e0e0e0;
 }
 
 .tetromino {
     outline-color: grey;
     outline-style: outset;
     outline-width: thin;
+}
+
+.keyTips {
+    color: #e0e0e0;
+    margin-right: 50px;    
 }
 
 .info-box {
@@ -44,11 +57,12 @@ body {
     margin-top: 50px;
     margin-left: 20px;
     width: 180px;
-    height: 600px;
-    background-color: #ccb3ff;
+    height: 625px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    background-color: #252a33;
+    color: #e0e0e0;
 }
 
 .holdBox {
@@ -57,8 +71,13 @@ body {
 
 .holdBox canvas {
     display: block;
-    margin: 0 auto;
+    margin-bottom: 20px;
+    background-color: #ffff00;
 }
+
+#hold-button {
+    margin-bottom: 10px;
+}  
 
 .score {
     text-align: center;
@@ -86,12 +105,13 @@ body {
 
 .mini-grid {
     margin-top: 30px;
-    margin-left: 50px;
+    /* margin-left: 50px; */
     width: 80px;
     height: 80px;
     display: flex;
     flex-wrap: wrap;
     background-color: yellow;
+    align-items: center;
 }
 
 .mini-grid div {
@@ -114,19 +134,39 @@ button:active {
 }
 
 @media (max-width: 768px) {
-    button {
-        font-size: 22px;
-        padding: 16px;
-    }
 
-    .info-box {
-        width: 100%;
-        margin-left: 0;
-        margin-top: 20px;
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
     }
 
     .container {
         flex-direction: column;
         align-items: center;
+        height: 100vh;
+        justify-content: center;
+    }
+
+    canvas#tetris {
+        max-height: 60vh;
+        width: auto;
+        height: auto;
+    }
+
+    .info-box {
+        width: 100%;
+        height: auto;
+        margin: 10px 0;
+    }
+
+    .nav {
+        display: flex;
+        justify-content: center;
+    }
+
+    button {
+        font-size: 24px;
+        padding: 18px;
     }
 }
