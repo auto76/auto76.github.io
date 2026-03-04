@@ -3,8 +3,23 @@ body {
    /* background-color: #e9ecef; */
 }
 
+#main {
+    padding-bottom: 80px;
+}
+
+#footer {
+    margin-top: 60px;
+}
+
 canvas {
+    image-rendering: pixelated;
+    display: block;
     background-color: #0f1117;
+}
+
+h1.title {
+    font-size: clamp(24px, 4vw, 36px);
+    margin-bottom: 30px;
 }
 
 #gameWindow {
@@ -36,7 +51,7 @@ canvas {
     /* margin-left: 100px; */
     resize: 100px;
     font-family: cursive;
-    color: #e0e0e0;
+    color: hsl(283, 95%, 8%);
 }
 
 .tetromino {
@@ -46,7 +61,7 @@ canvas {
 }
 
 .keyTips {
-    color: #e0e0e0;
+    color: hsl(283, 95%, 8%);
     margin-right: 50px;    
 }
 
@@ -55,14 +70,16 @@ canvas {
     outline-style: inset;
     outline-width: medium;
     margin-top: 50px;
+    margin-bottom: 50px;
     margin-left: 20px;
     width: 180px;
-    height: 625px;
+    height: 700px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: #252a33;
-    color: #e0e0e0;
+    background-color: #dbd2fa;
+    color: hsl(283, 95%, 8%);
+    flex-shrink: 0;
 }
 
 .holdBox {
@@ -87,17 +104,18 @@ canvas {
     text-align: center;
 }
 
-.leftButton {
+/*
+.t-leftButton {
     text-align: center;
 }
 
-.rightButton {
+.t-rightButton {
     text-align: center;
 }
 
-.rotateButton {
+.t-rotateButton {
     text-align: center;
-}
+}  */
 
 .instructions {
     text-align: center;
@@ -119,10 +137,45 @@ canvas {
     width: 20px;
 } 
 
-button {
-    font-size: 18px;
-    padding: 12px;
-    touch-action: manipulation;
+/* ================================
+   TETRIS CONTROL BUTTONS
+================================ */
+
+.t-controls {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.t-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.t-down-row {
+    justify-content: center;
+}
+
+.t-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 10px;
+    border: 2px solid #4b3ca7;
+    background-color: #2b214d;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.t-btn:hover {
+    background-color: #3c2f6b;
+}
+
+.t-btn:active {
+    transform: scale(0.92);
 }
 
 button:focus {
@@ -133,40 +186,37 @@ button:active {
     transform: scale(0.95);
 }
 
+/* ================================
+   MOBILE FRIENDLY LAYOUT
+================================ */
+
 @media (max-width: 768px) {
 
-    html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-    }
-
-    .container {
+    #gameWindow .container {
         flex-direction: column;
         align-items: center;
-        height: 100vh;
-        justify-content: center;
+        gap: 20px;
     }
 
     canvas#tetris {
-        max-height: 60vh;
-        width: auto;
+        max-width: 90vw;
         height: auto;
     }
 
     .info-box {
         width: 100%;
+        max-width: 400px;
         height: auto;
-        margin: 10px 0;
+        margin: 0;
     }
 
-    .nav {
-        display: flex;
-        justify-content: center;
+    .keyTips {
+        display: none; /* optional: hides tips to save space */
     }
 
-    button {
-        font-size: 24px;
-        padding: 18px;
+    .t-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
     }
 }
