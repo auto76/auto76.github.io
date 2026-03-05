@@ -74,21 +74,36 @@ class Tetris {
         this.score = 0
              
         /* =============================
-           LINE CLEAR ANIMATION STATE (not working)
+           LINE CLEAR ANIMATION STATE 
            ============================= */
         
         this.clearingRows = []        // rows currently animating
         this.clearAnimationTime = 0   // animation timer
         this.clearDuration = 300      // milliseconds  
-        
 
         this.lines = 0
         this.level = 1
         this.dropInterval = 1000
+        
+        /* ==========================================================
+        SOFT DROP STATE
+        ========================================================== */
+
+        this.softDropping = false
+        this.softDropSpeed = 50 
+
+        /* ==========================================================
+        LOCK DELAY SYSTEM
+        Prevents instant locking when piece touches floor
+        ========================================================== */
+
+        this.lockDelay = 500
+        this.lockTimer = 0
+        this.isGrounded = false
+
         this.lastTime = 0
         this.dropCounter = 0
         this.moveIntervals = {}
-
         this.DAS = 150
         this.ARR = 30
         this.keyTimers = {}
@@ -103,6 +118,9 @@ class Tetris {
         this.fillNextQueue()
 
         this.initControls()
+       
+        this.dpadHardDrop = false    /*Toggle conroller Hard Drop  */
+
         this.reset()
 
         this.update()
@@ -110,12 +128,15 @@ class Tetris {
         /* =============================
            GAMEPAD SUPPORT INIT
            ============================= */
+        
         this.gamepadIndex = null
         this.gamepadButtons = {}
         window.addEventListener("gamepadconnected", (e) => {
             console.log("Gamepad connected")
             this.gamepadIndex = e.gamepad.index
         })
+        /* Stores previous frame button states   */
+        this.prevGamepadButtons = {} 
     }
 
     /* ==========================================================
@@ -389,25 +410,26 @@ class Tetris {
        DROP LOGIC
        ========================================================== */
 
-    drop() {
+        drop() {
 
-        this.active.pos.y++
+            this.active.pos.y++
 
-        if (!this.valid(this.active.matrix, this.active.pos)) {
+            if (!this.valid(this.active.matrix, this.active.pos)) {
 
-            this.active.pos.y--
-            this.merge()
+                this.active.pos.y--
 
-            this.clearLines()
-
-            /* If no animation triggered, spawn immediately */
-            if (this.state !== "clearing") {
-                this.spawn()
+                /* Piece has touched the ground */
+                this.isGrounded = true
             }
-        }
+            else {
 
-        this.dropCounter = 0
-    }
+                /* Piece moved successfully */
+                this.isGrounded = false
+                this.lockTimer = 0
+            }
+
+            this.dropCounter = 0
+        }
 
     hardDrop() {
 
@@ -753,8 +775,39 @@ class Tetris {
 
             this.dropCounter += delta
 
-            if (this.dropCounter > this.dropInterval) {
+            /* ==========================================================
+            DROP SPEED LOGIC
+            - Normal drop
+            - Faster when soft drop active
+            ========================================================== */
+
+            const currentInterval = this.softDropping
+                ? this.dropInterval / 8
+                : this.dropInterval
+
+            if (this.dropCounter > currentInterval)
                 this.drop()
+        }
+
+        /* ==========================================================
+        LOCK DELAY HANDLING
+        Allows player movement before piece locks
+        ========================================================== */
+
+        if (this.isGrounded && this.state === "running") {
+
+            this.lockTimer += delta
+
+            if (this.lockTimer >= this.lockDelay) {
+
+                this.merge()
+                this.clearLines()
+
+                if (this.state !== "clearing")
+                    this.spawn()
+
+                this.lockTimer = 0
+                this.isGrounded = false
             }
         }
 
@@ -814,6 +867,112 @@ class Tetris {
 
     initControls() {
 
+        /* ==========================================================
+        MOBILE D-PAD CONTROLS
+        - Supports hold movement
+        - Works like keyboard/controller DAS system
+        ========================================================== */
+
+        const mLeft = document.getElementById("m-left")
+        const mRight = document.getElementById("m-right")
+        const mDown = document.getElementById("m-down")
+        const mUp = document.getElementById("m-up")
+
+        /* LEFT */
+
+        mLeft.addEventListener("touchstart", (e) => {
+            e.preventDefault()
+            if (this.state === "running") this.startMove(-1)
+        })
+
+        mLeft.addEventListener("touchend", () => {
+
+            clearTimeout(this.moveIntervals[-1])
+            clearInterval(this.moveIntervals[-1])
+            delete this.moveIntervals[-1]
+        })
+
+        /* RIGHT */
+
+        mRight.addEventListener("touchstart", (e) => {
+            e.preventDefault()
+            if (this.state === "running") this.startMove(1)
+        })
+
+        mRight.addEventListener("touchend", () => {
+
+            clearTimeout(this.moveIntervals[1])
+            clearInterval(this.moveIntervals[1])
+            delete this.moveIntervals[1]
+        })
+
+        /* SOFT DROP */
+
+        mDown.addEventListener("touchstart", (e) => {
+            e.preventDefault()
+            this.softDropping = true
+        })
+
+        mDown.addEventListener("touchend", () => {
+            this.softDropping = false
+        })
+
+        /* ROTATE */
+
+        mUp.addEventListener("touchstart", (e) => {
+            e.preventDefault()
+            if (this.state === "running") this.rotate(1)
+        })
+
+        /* ==========================================================
+        MOBILE D-PAD DRAG WITH BOUNDS + EDGE SNAP
+        ========================================================== */
+
+        const dpad = document.getElementById("mobile-controls")
+        if (!dpad) return
+
+        let isDragging = false
+        let offsetX = 0
+        let offsetY = 0
+
+        dpad.addEventListener("touchstart", (e) => {
+
+            isDragging = true
+
+            offsetX = e.touches[0].clientX - dpad.offsetLeft
+            offsetY = e.touches[0].clientY - dpad.offsetTop
+        })
+
+        dpad.addEventListener("touchmove", (e) => {
+
+            if (!isDragging) return
+
+            let newX = e.touches[0].clientX - offsetX
+            let newY = e.touches[0].clientY - offsetY
+
+            /* ---- Bounds Clamp ---- */
+            newX = Math.max(0, Math.min(window.innerWidth - dpad.offsetWidth, newX))
+            newY = Math.max(0, Math.min(window.innerHeight - dpad.offsetHeight, newY))
+
+            dpad.style.left = newX + "px"
+            dpad.style.top = newY + "px"
+        })
+
+        dpad.addEventListener("touchend", () => {
+
+            isDragging = false
+
+            /* ---- SNAP TO NEAREST SIDE ---- */
+            const midpoint = window.innerWidth / 2
+
+            if (dpad.offsetLeft < midpoint) {
+                dpad.style.left = "20px"
+            } else {
+                dpad.style.left =
+                    (window.innerWidth - dpad.offsetWidth - 20) + "px"
+            }
+        })
+
         /* (REMOVE COMMENT IF RESET BUTTON IS NEEDED) 
         document.getElementById("resetHighScore")
             .onclick = () => {
@@ -871,6 +1030,9 @@ class Tetris {
                 clearInterval(this.moveIntervals[1])
                 delete this.moveIntervals[1]
             }
+
+            if (e.key === "ArrowDown")
+                this.softDropping = false
         })
 
         document.addEventListener("keydown", e => {
@@ -899,7 +1061,7 @@ class Tetris {
                 this.startMove(1)
 
             if (e.key === "ArrowDown")
-                this.drop()
+                this.softDropping = true
 
             if (e.key === "ArrowUp")
                 this.rotate(1)
@@ -922,91 +1084,117 @@ class Tetris {
     - Start = Pause
     ========================================================== */
 
+    /* ==========================================================
+   GAMEPAD INPUT SYSTEM WITH EDGE DETECTION
+   Prevents 60fps button spam
+========================================================== */
+
     pollGamepad() {
 
         if (this.gamepadIndex === null) return
 
-        const gamepad = navigator.getGamepads()[this.gamepadIndex]
-        if (!gamepad) return
+        const gp = navigator.getGamepads()[this.gamepadIndex]
+        if (!gp) return
 
-        const deadZone = 0.4
+        const deadZone = 0.35
 
-        /* ---- LEFT / RIGHT ---- */
-        if (gamepad.axes[0] < -deadZone) this.startMove(-1)
-        if (gamepad.axes[0] > deadZone) this.startMove(1)
+        /* ==============================
+        ANALOG STICK MOVEMENT
+        ============================== */
 
-        /* ---- D-PAD ---- */
-        if (gamepad.buttons[14].pressed) this.startMove(-1)
-        if (gamepad.buttons[15].pressed) this.startMove(1)
+        if (gp.axes[0] < -deadZone) this.startMove(-1)
+        if (gp.axes[0] > deadZone) this.startMove(1)
 
-        /* ---- SOFT DROP ---- */
-        if (gamepad.buttons[13].pressed) this.drop()
+        /* ==============================
+        D-PAD MOVEMENT
+        ============================== */
 
-        /* ---- ROTATE ---- */
-        if (gamepad.buttons[0].pressed) this.rotate(1)
+        if (gp.buttons[14].pressed) this.startMove(-1)
+        if (gp.buttons[15].pressed) this.startMove(1)
 
-        /* ---- HARD DROP ---- */
-        if (gamepad.buttons[1].pressed) this.hardDrop()
+        /* ==========================================================
+        STOP CONTROLLER MOVEMENT CLEANLY
+        - Clears timers
+        - Removes interval entry so movement can start again
+        ========================================================== */
 
-        /* ---- HOLD ---- */
-        if (gamepad.buttons[3].pressed) this.hold()
+        if (!gp.buttons[14].pressed && this.moveIntervals[-1]) {
 
-        /* ---- PAUSE ---- */
-        if (gamepad.buttons[9].pressed) this.togglePause()
+            clearTimeout(this.moveIntervals[-1])
+            clearInterval(this.moveIntervals[-1])
+
+            delete this.moveIntervals[-1]
+        }
+
+        if (!gp.buttons[15].pressed && this.moveIntervals[1]) {
+
+            clearTimeout(this.moveIntervals[1])
+            clearInterval(this.moveIntervals[1])
+
+            delete this.moveIntervals[1]
+        }
+
+        /* ==============================
+        EDGE DETECTION
+        (prevents spam)
+        ============================== */
+
+        gp.buttons.forEach((btn, index) => {
+
+            const wasPressed = this.prevGamepadButtons[index] || false
+
+            /* Trigger ONLY when button becomes pressed */
+            if (btn.pressed && !wasPressed) {
+
+                switch(index) {
+
+                    case 13: // D-pad DOWN
+                      /*    this.drop()    */
+                        this.softDropping = btn.pressed
+                        break
+
+                    case 12:
+                        if (this.dpadHardDrop)
+                            this.hardDrop()
+                        else
+                            this.rotate(1)
+                        break
+
+                    case 0: // A / Cross
+                        this.rotate(1)
+                        break
+
+                    case 1: // B / Circle
+                        this.hardDrop()
+                        break
+
+                    case 3: // Y / Triangle
+                        this.hold()
+                        break
+
+                    /* ==========================================================
+                    CONTROLLER START BUTTON
+                    - Starts new game when game over
+                    - Pauses/unpauses otherwise
+                    ========================================================== */
+
+                    case 9:
+
+                        if (this.state === "gameover") {
+
+                            this.reset()
+                            return
+                        }
+
+                        this.togglePause()
+                        break
+                }
+            }
+
+            this.prevGamepadButtons[index] = btn.pressed
+        })
     }
 }
 
 document.addEventListener("DOMContentLoaded",
     () => new Tetris())
-
-/* ==========================================================
-   MOBILE D-PAD DRAG WITH BOUNDS + EDGE SNAP
-========================================================== */
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    const dpad = document.getElementById("mobile-controls")
-    if (!dpad) return
-
-    let isDragging = false
-    let offsetX = 0
-    let offsetY = 0
-
-    dpad.addEventListener("touchstart", (e) => {
-
-        isDragging = true
-
-        offsetX = e.touches[0].clientX - dpad.offsetLeft
-        offsetY = e.touches[0].clientY - dpad.offsetTop
-    })
-
-    dpad.addEventListener("touchmove", (e) => {
-
-        if (!isDragging) return
-
-        let newX = e.touches[0].clientX - offsetX
-        let newY = e.touches[0].clientY - offsetY
-
-        /* ---- Bounds Clamp ---- */
-        newX = Math.max(0, Math.min(window.innerWidth - dpad.offsetWidth, newX))
-        newY = Math.max(0, Math.min(window.innerHeight - dpad.offsetHeight, newY))
-
-        dpad.style.left = newX + "px"
-        dpad.style.top = newY + "px"
-    })
-
-    dpad.addEventListener("touchend", () => {
-
-        isDragging = false
-
-        /* ---- SNAP TO NEAREST SIDE ---- */
-        const midpoint = window.innerWidth / 2
-
-        if (dpad.offsetLeft < midpoint) {
-            dpad.style.left = "20px"
-        } else {
-            dpad.style.left =
-                (window.innerWidth - dpad.offsetWidth - 20) + "px"
-        }
-    })
-})
