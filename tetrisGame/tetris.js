@@ -39,6 +39,13 @@ class Tetris {
         this.scoreEl = document.getElementById("score")
         this.levelEl = document.getElementById("level")
 
+        /* ==========================================================
+           COMBO SYSTEM
+           Tracks consecutive line clears
+           ========================================================== */
+
+        this.combo = -1
+
         /* =============================
            LOCAL HIGH SCORE SYSTEM
            ============================= */
@@ -70,9 +77,23 @@ class Tetris {
             J: "#0000FF",
             L: "#FF8800"
         }
+        
+        this.sounds = {
+            rotate: new Audio("sounds/rotate.wav"),
+            removelines: new Audio("sounds/removelines.mp3"),
+            drop: new Audio("sounds/drop.wav"),
+            gameover: new Audio("sounds/gameover.mp3"),
+            hold: new Audio("sounds/hold.mp3"),
+            levelup: new Audio("sounds/levelup.mp3"),
+            tspin: new Audio("sounds/tspin.mp3")
+        }
 
+        this.soundEnabled = true
+        this.gameOverSoundPlayed = false
+
+        this.spawnAnim = 0
         this.score = 0
-             
+
         /* =============================
            LINE CLEAR ANIMATION STATE 
            ============================= */
@@ -80,34 +101,53 @@ class Tetris {
         this.clearingRows = []        // rows currently animating
         this.clearAnimationTime = 0   // animation timer
         this.clearDuration = 300      // milliseconds  
+        this.particles = []           // particle explosion
 
         this.lines = 0
         this.level = 1
+        this.levelFlash = 0
         this.dropInterval = 1000
         
         /* ==========================================================
-        SOFT DROP STATE
-        ========================================================== */
+           SOFT DROP STATE
+           ========================================================== */
 
         this.softDropping = false
         this.softDropSpeed = 50 
 
         /* ==========================================================
-        LOCK DELAY SYSTEM
-        Prevents instant locking when piece touches floor
-        ========================================================== */
+           LOCK DELAY SYSTEM
+           Prevents instant locking when piece touches floor
+           ========================================================== */
 
         this.lockDelay = 500
         this.lockTimer = 0
         this.isGrounded = false
 
+        /* ==========================================================
+           GHOST PIECE FADE ANIMATION
+           ========================================================== */
+
+        this.ghostFade = 0
+        this.ghostFadeDir = 1
+
+        /* ==========================================================
+          LEVEL SPEED TABLE
+          ========================================================== */
+
+        this.speedTable = [
+            1000,850,720,630,550,
+            470,380,300,220,150,
+            120,100,80,70,60
+        ]
+
         this.lastTime = 0
         this.dropCounter = 0
         this.moveIntervals = {}
-        this.DAS = 150
-        this.ARR = 30
+        this.DAS = 1000  // delay before auto movement begins
+        this.ARR = 1000    // repeat rate (higher = slower movement)
         this.keyTimers = {}
-
+        this.renderY = 0         // Smooth piece falling
         this.bag = []
         this.holdPiece = null
         this.canHold = true
@@ -189,6 +229,7 @@ class Tetris {
 
     spawn() {
 
+        this.spawnAnim = 1.4
         this.dropCounter = 0
         this.lastTime = 0
 
@@ -317,6 +358,11 @@ class Tetris {
         const kicks = this.getKickData(
             type, oldRotation, newRotation)
 
+        if(this.soundEnabled)
+            this.sounds.rotate.play()
+        
+        this.lockTimer = 0
+
         for (let [x,y] of kicks) {
             if (this.valid(rotated, {
                 x:this.active.pos.x + x,
@@ -329,6 +375,8 @@ class Tetris {
                 return
             }
         }
+
+        this.lastMoveWasRotate = true       
     }
 
     getKickData(type, from, to) {
@@ -378,60 +426,131 @@ class Tetris {
        DAS / ARR MOVEMENT SYSTEM
        ========================================================== */
 
-    startMove(dir) {
+    startMove(dir, DAS = this.DAS, ARR = this.ARR) {
 
         if (this.moveIntervals[dir]) return
 
-        // Initial move instantly
         this.move(dir)
 
-        // DAS delay
         const timeout = setTimeout(() => {
 
             this.moveIntervals[dir] = setInterval(() => {
                 this.move(dir)
-            }, this.ARR)
+            }, ARR)
 
-        }, this.DAS)
+        }, DAS)
 
         this.moveIntervals[dir] = timeout
-    }
+    }    
 
     move(dir) {
 
         this.active.pos.x += dir
+        this.lastMoveWasRotate = false
 
         if (!this.valid(this.active.matrix, this.active.pos)) {
             this.active.pos.x -= dir
         }
+        else {
+
+            /* ==========================================================
+            RESET LOCK TIMER WHEN PLAYER MOVES
+            Prevents floating piece locks
+            ========================================================== */
+
+            this.lockTimer = 0
+        }
+    }
+
+    /* ==========================================================
+       SPIN DETECT LOGIC
+       ========================================================== */
+
+    detectTSpin() {
+
+        if (this.active.type !== "T") return false
+        if (!this.lastMoveWasRotate) return false
+
+        let corners = 0
+
+        const px = this.active.pos.x + 1
+        const py = this.active.pos.y + 1
+
+        const checks = [
+            [px-1,py-1],
+            [px+1,py-1],
+            [px-1,py+1],
+            [px+1,py+1]
+        ]
+
+        checks.forEach(([x,y])=>{
+            if (
+                x < 0 || x >= this.COLS ||
+                y >= this.ROWS ||
+                (y >= 0 && this.board[y][x] !== 0)
+            ) corners++
+        })
+
+        if(this.soundEnabled)
+            this.sounds.tspin.play()
+
+        return corners >= 3
     }
 
     /* ==========================================================
        DROP LOGIC
        ========================================================== */
 
-        drop() {
+    /*  (WORKING DROP FUNCTION)  */
+    drop() {
 
-            this.active.pos.y++
+        this.active.pos.y++
+        this.renderY = this.active.pos.y - 1
 
-            if (!this.valid(this.active.matrix, this.active.pos)) {
+        if (!this.valid(this.active.matrix, this.active.pos)) {
 
-                this.active.pos.y--
+            this.active.pos.y--
 
-                /* Piece has touched the ground */
+            /* Piece has touched the ground */
+            this.isGrounded = true
+        }
+        else {
+
+            /* Piece moved successfully */
+            this.isGrounded = false
+            this.lockTimer = 0
+        }
+
+        this.dropCounter = 0
+    }
+
+    /*  NOT WORKING REMOVE COMMENT BEFORE PROMPT
+    drop() {
+
+        this.active.pos.y++
+
+        if (!this.valid(this.active.matrix, this.active.pos)) {
+
+            this.active.pos.y--
+
+            /* piece is now grounded */
+    /*        if (!this.isGrounded) {
                 this.isGrounded = true
-            }
-            else {
-
-                /* Piece moved successfully */
-                this.isGrounded = false
                 this.lockTimer = 0
             }
 
-            this.dropCounter = 0
+        } else {
+
+            this.isGrounded = false
         }
 
+        this.dropCounter = 0
+    }                               */
+
     hardDrop() {
+
+        if(this.soundEnabled)
+            this.sounds.drop.play()
 
         while (this.valid(this.active.matrix,
             { x: this.active.pos.x, y: this.active.pos.y + 1 })) {
@@ -471,6 +590,10 @@ class Tetris {
 
         const currentType = this.active.type
 
+        if(this.soundEnabled)
+            this.sounds.hold.play()
+
+
         if (!this.holdPiece) {
             this.holdPiece = currentType
             this.spawn()
@@ -508,7 +631,12 @@ class Tetris {
             }
         }
 
-        if (rowsToClear.length === 0) return
+        if (rowsToClear.length === 0) {
+            this.combo = -1
+            return
+        }
+
+        rowsToClear.forEach(r=>this.spawnParticles(r))
 
         /* ---- Trigger animation instead of immediate removal ---- */
 
@@ -528,6 +656,9 @@ class Tetris {
         let newBoard = []
         let linesCleared = this.clearingRows.length
 
+        if(this.soundEnabled)
+            this.sounds.removelines.play()
+
         // Rebuild board without cleared rows
         for (let y = 0; y < this.ROWS; y++) {
             if (!this.clearingRows.includes(y)) {
@@ -542,19 +673,88 @@ class Tetris {
         this.board = newBoard
         this.clearingRows = []
 
-        /* ---- SCORING ---- */
-        const scoreTable = {1:100,2:300,3:500,4:800}
+        /* ==========================================================
+           LEVEL CLEAR ANIMATION
+           ========================================================== */
 
-        this.score += scoreTable[linesCleared] * this.level
         this.lines += linesCleared
 
-        this.level = Math.floor(this.lines / 10) + 1
-        this.dropInterval = Math.max(1000 - (this.level - 1) * 75, 80)
+        const newLevel = Math.floor(this.lines / 10) + 1
+
+        if (newLevel > this.level) {
+
+            this.level = newLevel
+            this.levelFlash = 600
+
+            if(this.soundEnabled)
+                this.sounds.levelup.play()
+
+            this.dropInterval =
+                this.speedTable[Math.min(this.level-1, this.speedTable.length-1)]
+        }
+
+        /* ==========================================================
+        SCORING SYSTEM
+        Includes:
+        - Standard line clears
+        - Combo bonuses
+        ========================================================== */
+
+        const scoreTable = {1:100,2:300,3:500,4:800}
+        
+        /* Apply T-Spin Score  */
+        const tspin = this.detectTSpin()
+
+            if (tspin) {
+
+                const tSpinScore = {
+                    0:400,
+                    1:800,
+                    2:1200,
+                    3:1600
+                }
+
+                baseScore = tSpinScore[linesCleared] * this.level
+            }
+
+        /* Increase combo counter */
+        this.combo++
+
+        /* Base score */
+        let baseScore = scoreTable[linesCleared] * this.level
+
+        /* Combo bonus */
+        let comboBonus = this.combo > 0
+            ? this.combo * 50 * this.level
+            : 0
+
+        this.score += baseScore + comboBonus
 
         this.scoreEl.innerText = this.score
         this.levelEl.innerText = this.level
 
         this.saveHighScore()   // check for new high score
+    }
+
+    /* ==========================================================
+       PARTICLE EXPLOSION EFFECT
+       ========================================================== */    
+
+    spawnParticles(row) {
+
+        for (let i=0;i<25;i++) {
+
+            this.particles.push({
+
+                x: Math.random()*this.canvas.width,
+                y: row*this.BLOCK + this.BLOCK/2,
+
+                vx: (Math.random()-0.5)*4,
+                vy: (Math.random()-1)*4,
+
+                life: 40
+            })
+        }
     }
 
     /* ==========================================================
@@ -677,39 +877,99 @@ class Tetris {
         this.ctx.fillRect(0, 0,
             this.canvas.width, this.canvas.height)
 
-        this.drawMatrix(this.board, { x: 0, y: 0 }) 
+        this.drawMatrix(this.board, { x: 0, y: 0 })
+        this.ctx.globalAlpha = Math.max(0.2, 1 - this.spawnAnim)
         
         /* ---- FLASH CLEARING ROWS ---- */
         if (this.clearingRows.length > 0) {
 
-            this.ctx.fillStyle = "white"
+            /* ==========================================================
+               FADE OUT LINE CLEAR ANIMATION
+               ========================================================== */
+
+            const progress = this.clearAnimationTime / this.clearDuration
 
             this.clearingRows.forEach(row => {
 
+                const shrink = 1 - progress
+
+                this.ctx.fillStyle = "white"
+
                 this.ctx.fillRect(
-                    0,
+                    this.canvas.width * (progress / 2),
                     row * this.BLOCK,
-                    this.canvas.width,
+                    this.canvas.width * shrink,
                     this.BLOCK
                 )
             })
         }  
         
+        /* ==========================================================
+           PARTICLE EXPLOSION EFFECT
+           ========================================================== */
+
+        this.particles.forEach(p=>{
+
+            this.ctx.fillStyle = "white"
+
+            this.ctx.fillRect(
+                p.x,
+                p.y,
+                3,
+                3
+            )
+        })
+
+        /* ==========================================================
+           LEVEL UP FLASH EFFECT
+           ========================================================== */
+
+        if (this.levelFlash > 0) {
+
+            this.ctx.fillStyle = "rgba(255,255,255,0.35)"
+            this.ctx.fillRect(
+                0,0,
+                this.canvas.width,
+                this.canvas.height
+            )
+
+            this.levelFlash -= 16
+        }
+
         /*  GHOST FUNCTION  */
         const ghostY = this.getGhostPosition()
 
-        this.ctx.globalAlpha = 0.3
+        this.ctx.globalAlpha = this.ghostFade
         this.drawMatrix(this.active.matrix,
             { x: this.active.pos.x, y: ghostY })
         this.ctx.globalAlpha = 1 
 
         if (this.active)
-            this.drawMatrix(this.active.matrix,
-                this.active.pos)  
+            this.drawMatrix(this.active.matrix, {
+                x: this.active.pos.x,
+                y: this.renderY
+            }) 
 
         if (this.state === "gameover") {
             this.ctx.fillStyle = "rgba(0,0,0,0.7)"
             this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height)
+
+            if(this.soundEnabled)
+                this.sounds.gameover.play()
+
+        /*      NOT WORKING REMOVE COMMENT BEFORE PROMPT 
+            if (this.state === "gameover") {
+
+                if (!this.gameOverSoundPlayed && this.soundEnabled) {
+
+                    this.music.pause()
+
+                    this.sounds.gameover.currentTime = 0
+                    this.sounds.gameover.play()
+
+                    this.gameOverSoundPlayed = true
+                }
+            }   */
 
             if (this.state === "gameover" && !this.highScoreSaved) {
                 this.saveHighScore()
@@ -789,6 +1049,27 @@ class Tetris {
                 this.drop()
         }
 
+        if (this.spawnAnim > 0) {
+            this.spawnAnim -= delta * 0.002
+        }
+
+        /* ==========================================================
+           GHOST FADE ANIMATION
+           Creates a pulsing transparency effect
+           ========================================================== */
+
+        this.ghostFade += delta * 0.002 * this.ghostFadeDir
+
+        if (this.ghostFade > 0.35) {
+            this.ghostFade = 0.35
+            this.ghostFadeDir = -1
+        }
+
+        if (this.ghostFade < 0.15) {
+            this.ghostFade = 0.15
+            this.ghostFadeDir = 1
+        }
+
         /* ==========================================================
         LOCK DELAY HANDLING
         Allows player movement before piece locks
@@ -810,6 +1091,19 @@ class Tetris {
                 this.isGrounded = false
             }
         }
+
+        /* ---- UPDATE PARTICLE EXPLOSION ---- */
+
+        this.particles.forEach(p=>{
+
+            p.x += p.vx
+            p.y += p.vy
+            p.vy += 0.15
+            p.life--
+        })
+
+        this.particles =
+            this.particles.filter(p=>p.life>0)
 
         /* ---- CLEARING ANIMATION STATE ---- */
         if (this.state === "clearing") {
@@ -865,113 +1159,172 @@ class Tetris {
             this.state = "running"
     }
 
+
     initControls() {
+ 
+        
+        document.getElementById("mute-button").onclick = () => {
+
+            this.soundEnabled = !this.soundEnabled
+
+            document.getElementById("mute-button").innerText =
+                this.soundEnabled ? "🔊" : "🔇"
+        }
 
         /* ==========================================================
-        MOBILE D-PAD CONTROLS
-        - Supports hold movement
-        - Works like keyboard/controller DAS system
-        ========================================================== */
+           UNIVERSAL INPUT BINDING
+           Supports BOTH mouse and touch safely
+           ========================================================== */
 
-        const mLeft = document.getElementById("m-left")
+        function bindPress(element, press, release) {
+
+            /* ---- Mouse ---- */
+
+            element.addEventListener("mousedown", press)
+
+            element.addEventListener("mouseup", release)
+
+            element.addEventListener("mouseleave", release)
+
+            /* ---- Touch ---- */
+
+            element.addEventListener("touchstart", (e)=>{
+                e.preventDefault()
+                press(e)
+            }, { passive:false })
+
+            element.addEventListener("touchend", release)
+        }
+
+        const mLeft  = document.getElementById("m-left")
         const mRight = document.getElementById("m-right")
-        const mDown = document.getElementById("m-down")
-        const mUp = document.getElementById("m-up")
+        const mDown  = document.getElementById("m-down")
+        const mUp    = document.getElementById("m-up")
 
-        /* LEFT */
+        /* ===============================
+           D-PAD LEFT
+           =============================== */
 
-        mLeft.addEventListener("touchstart", (e) => {
-            e.preventDefault()
-            if (this.state === "running") this.startMove(-1)
-        })
+        bindPress(
+            mLeft,
 
-        mLeft.addEventListener("touchend", () => {
+            () => {
+                if (this.state === "running")
+                    this.startMove(-1)
+            },
 
-            clearTimeout(this.moveIntervals[-1])
-            clearInterval(this.moveIntervals[-1])
-            delete this.moveIntervals[-1]
-        })
-
-        /* RIGHT */
-
-        mRight.addEventListener("touchstart", (e) => {
-            e.preventDefault()
-            if (this.state === "running") this.startMove(1)
-        })
-
-        mRight.addEventListener("touchend", () => {
-
-            clearTimeout(this.moveIntervals[1])
-            clearInterval(this.moveIntervals[1])
-            delete this.moveIntervals[1]
-        })
-
-        /* SOFT DROP */
-
-        mDown.addEventListener("touchstart", (e) => {
-            e.preventDefault()
-            this.softDropping = true
-        })
-
-        mDown.addEventListener("touchend", () => {
-            this.softDropping = false
-        })
-
-        /* ROTATE */
-
-        mUp.addEventListener("touchstart", (e) => {
-            e.preventDefault()
-            if (this.state === "running") this.rotate(1)
-        })
-
-        /* ==========================================================
-        MOBILE D-PAD DRAG WITH BOUNDS + EDGE SNAP
-        ========================================================== */
-
-        const dpad = document.getElementById("mobile-controls")
-        if (!dpad) return
-
-        let isDragging = false
-        let offsetX = 0
-        let offsetY = 0
-
-        dpad.addEventListener("touchstart", (e) => {
-
-            isDragging = true
-
-            offsetX = e.touches[0].clientX - dpad.offsetLeft
-            offsetY = e.touches[0].clientY - dpad.offsetTop
-        })
-
-        dpad.addEventListener("touchmove", (e) => {
-
-            if (!isDragging) return
-
-            let newX = e.touches[0].clientX - offsetX
-            let newY = e.touches[0].clientY - offsetY
-
-            /* ---- Bounds Clamp ---- */
-            newX = Math.max(0, Math.min(window.innerWidth - dpad.offsetWidth, newX))
-            newY = Math.max(0, Math.min(window.innerHeight - dpad.offsetHeight, newY))
-
-            dpad.style.left = newX + "px"
-            dpad.style.top = newY + "px"
-        })
-
-        dpad.addEventListener("touchend", () => {
-
-            isDragging = false
-
-            /* ---- SNAP TO NEAREST SIDE ---- */
-            const midpoint = window.innerWidth / 2
-
-            if (dpad.offsetLeft < midpoint) {
-                dpad.style.left = "20px"
-            } else {
-                dpad.style.left =
-                    (window.innerWidth - dpad.offsetWidth - 20) + "px"
+            () => {
+                clearTimeout(this.moveIntervals[-1])
+                clearInterval(this.moveIntervals[-1])
+                delete this.moveIntervals[-1]
             }
-        })
+        )
+
+        /* ===============================
+           D-PAD RIGHT
+           =============================== */
+
+        bindPress(
+            mRight,
+
+            () => {
+                if (this.state === "running")
+                    this.startMove(1)
+            },
+
+            () => {
+                clearTimeout(this.moveIntervals[1])
+                clearInterval(this.moveIntervals[1])
+                delete this.moveIntervals[1]
+            }
+        )
+
+        /* ===============================
+           D-PAD SOFT DROP
+           =============================== */
+
+        bindPress(
+            mDown,
+
+            () => { this.softDropping = true },
+
+            () => { this.softDropping = false }
+        )
+
+        /* ===============================
+           D-PAD ROTATE
+           =============================== */
+
+        bindPress(
+            mUp,
+
+            () => {
+                if (this.state === "running")
+                    this.rotate(1)
+            },
+
+            () => {}
+        )
+
+        /* ===============================
+           D-PAD START/PAUSE
+           =============================== */
+
+        bindPress(
+            document.getElementById("m-start"),
+            ()=>this.togglePause(),
+            ()=>{}
+        )
+
+        /* ===============================
+           D-PAD HOLD
+           =============================== */
+
+        bindPress(
+            document.getElementById("m-hold"),
+            ()=>this.hold(),
+            ()=>{}
+        )
+
+        /* ===============================
+           D-PAD HARD DROP
+           =============================== */
+        
+        bindPress(
+            document.getElementById("m-drop"),
+            ()=>this.hardDrop(),
+            ()=>{}
+        )
+
+        makeDraggable(document.getElementById("mobile-controls"))
+
+        function makeDraggable(el) {
+
+            let offsetX = 0
+            let offsetY = 0
+            let dragging = false
+
+            el.addEventListener("touchstart", e => {
+
+                dragging = true
+                const rect = el.getBoundingClientRect()
+
+                offsetX = e.touches[0].clientX - rect.left
+                offsetY = e.touches[0].clientY - rect.top
+            })
+
+            document.addEventListener("touchmove", e => {
+
+                if (!dragging) return
+
+                el.style.left = (e.touches[0].clientX - offsetX) + "px"
+                el.style.top  = (e.touches[0].clientY - offsetY) + "px"
+            })
+
+            document.addEventListener("touchend", () => {
+                dragging = false
+            })
+        }
 
         /* (REMOVE COMMENT IF RESET BUTTON IS NEEDED) 
         document.getElementById("resetHighScore")
@@ -1009,13 +1362,38 @@ class Tetris {
             }
 
         document.getElementById("rotate-button")
-            .onclick = () => this.rotate(1)
-
-        document.getElementById("down-button")
-            .onclick = () => this.drop()            
+            .onclick = () => this.rotate(1)  
 
         document.getElementById("hold-button")
             .onclick = () => this.hold()
+
+        /* ==========================================================
+        SOFT DROP BUTTON (ON SCREEN CONTROLS)
+        Works the same as holding ArrowDown
+        ========================================================== */
+
+        const downBtn = document.getElementById("down-button")
+
+        downBtn.addEventListener("mousedown", () => {
+            this.softDropping = true
+        })
+
+        downBtn.addEventListener("mouseup", () => {
+            this.softDropping = false
+        })
+
+        downBtn.addEventListener("mouseleave", () => {
+            this.softDropping = false
+        })
+
+        downBtn.addEventListener("touchstart", (e) => {
+            e.preventDefault()
+            this.softDropping = true
+        })
+
+        downBtn.addEventListener("touchend", () => {
+            this.softDropping = false
+        })      
 
         document.addEventListener("keyup", e => {
 
@@ -1074,24 +1452,25 @@ class Tetris {
         })
     }
 
+    
     /* ==========================================================
-    FULL GAMEPAD SUPPORT (Xbox / PS / Generic)
-    - Left Stick = Move
-    - D-Pad = Move
-    - A / Cross = Rotate
-    - B / Circle = Hard Drop
-    - Y / Triangle = Hold
-    - Start = Pause
-    ========================================================== */
-
-    /* ==========================================================
-   GAMEPAD INPUT SYSTEM WITH EDGE DETECTION
-   Prevents 60fps button spam
-========================================================== */
+       GAMEPAD INPUT SYSTEM WITH EDGE DETECTION
+       - Prevents 60fps button spam
+       - Supports (Xbox / PS / Generic)
+       - Left Stick = Move
+       - D-Pad = Move
+       - A / Cross = Rotate
+       - B / Circle = Hard Drop
+       - Y / Triangle = Hold
+       - Start = Pause
+       ========================================================== */
 
     pollGamepad() {
 
-        if (this.gamepadIndex === null) return
+        const gamepads = navigator.getGamepads()
+        if (!gamepads) return
+
+        if (this.gamepadIndex === null) return  
 
         const gp = navigator.getGamepads()[this.gamepadIndex]
         if (!gp) return
@@ -1102,8 +1481,36 @@ class Tetris {
         ANALOG STICK MOVEMENT
         ============================== */
 
-        if (gp.axes[0] < -deadZone) this.startMove(-1)
-        if (gp.axes[0] > deadZone) this.startMove(1)
+        if (gp.axes[0] < -deadZone) {
+            this.startMove(-1)
+        } 
+        else if (this.moveIntervals[-1]) {
+
+            clearTimeout(this.moveIntervals[-1])
+            clearInterval(this.moveIntervals[-1])
+            delete this.moveIntervals[-1]
+        }
+
+        if (gp.axes[0] > deadZone) {
+            this.startMove(1)
+        } 
+        else if (this.moveIntervals[1]) {
+
+            clearTimeout(this.moveIntervals[1])
+            clearInterval(this.moveIntervals[1])
+            delete this.moveIntervals[1]
+        }
+
+        /* ==========================================================
+           CONTROLLER MOVEMENT SPEED CONTROL
+           ========================================================== */
+
+        const controllerARR = 1000     // repeat rate (higher = slower movement)
+        const controllerDAS = 1000      // delay before auto movement begins
+
+        if (gp.axes[0] < -deadZone) {
+            this.startMove(-1, controllerDAS, controllerARR)
+        }
 
         /* ==============================
         D-PAD MOVEMENT
@@ -1134,6 +1541,14 @@ class Tetris {
             delete this.moveIntervals[1]
         }
 
+        /* ==========================================================
+        CONTROLLER SOFT DROP
+        D-Pad Down = button 13
+        Active ONLY while held
+        ========================================================== */
+
+        this.softDropping = gp.buttons[13].pressed
+
         /* ==============================
         EDGE DETECTION
         (prevents spam)
@@ -1141,18 +1556,13 @@ class Tetris {
 
         gp.buttons.forEach((btn, index) => {
 
-            const wasPressed = this.prevGamepadButtons[index] || false
+        const wasPressed = this.prevGamepadButtons[index] || false
 
             /* Trigger ONLY when button becomes pressed */
             if (btn.pressed && !wasPressed) {
 
                 switch(index) {
-
-                    case 13: // D-pad DOWN
-                      /*    this.drop()    */
-                        this.softDropping = btn.pressed
-                        break
-
+                    
                     case 12:
                         if (this.dpadHardDrop)
                             this.hardDrop()

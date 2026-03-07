@@ -22,7 +22,8 @@ h1.title {
 }
 
 #gameWindow {
-    min-height: calc(100vh - 140px);
+    min-height: auto;
+    padding-bottom: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -90,7 +91,7 @@ h1.title {
     align-items: center;
     justify-content: flex-start;
 
-    padding: 12px 14px;
+    padding: 2px 2px;
 
     min-width: 240px;
     max-width: 260px;
@@ -99,7 +100,7 @@ h1.title {
     border: 2px solid #4b3ca7;
     border-radius: 16px;
 
-    gap: 6px;              /* smaller internal spacing */
+    gap: .5px;              /* smaller internal spacing */
 
     flex-shrink: 0;
 }
@@ -110,13 +111,13 @@ h1.title {
 }
 
 .hold-title {
-    margin-top: 4px;      /* smaller above hold */
+    margin-top: .5px;      /* smaller above hold */
     margin-bottom: 4px;
 }
 
 .holdBox canvas {
     display: block;
-    margin-top: 10px;
+    margin-top: 1px;
     margin-bottom: 10px;
     background-color: #ffff00;
 }
@@ -128,12 +129,12 @@ h1.title {
 
 .score {
     text-align: center;
-    margin-bottom: 2px;   /* smaller below score */
+    margin-bottom: .5px;   /* smaller below score */
 }
 
 .level-counter {
-    margin-top: 4px;      /* smaller above level */
-    margin-bottom: 4px;   /* smaller below level */
+    margin-top: 3px;      /* smaller above level */
+    margin-bottom: 1px;   /* smaller below level */
 }
 
 .instructions {
