@@ -77,19 +77,31 @@ class Tetris {
             J: "#0000FF",
             L: "#FF8800"
         }
-        
+
         this.sounds = {
-            rotate: new Audio("sounds/rotate.wav"),
+            rotate: new Audio("sounds/rotate.mp3"),
             removelines: new Audio("sounds/removelines.mp3"),
             drop: new Audio("sounds/drop.wav"),
             gameover: new Audio("sounds/gameover.mp3"),
-            hold: new Audio("sounds/hold.mp3"),
+            hold: new Audio("sounds/hold.wav"),
             levelup: new Audio("sounds/levelup.mp3"),
             tspin: new Audio("sounds/tspin.mp3")
         }
 
         this.soundEnabled = true
         this.gameOverSoundPlayed = false
+
+        Object.values(this.sounds).forEach(s => {
+            s.preload = "auto"
+        })  
+        
+        /* ==========================================================
+           BACKGROUND MUSIC SYSTEM
+           ========================================================== */
+
+        this.music = new Audio("sounds/tetrismusic.wav")
+        this.music.loop = true
+        this.music.volume = 0.5
 
         this.spawnAnim = 0
         this.score = 0
@@ -161,7 +173,8 @@ class Tetris {
        
         this.dpadHardDrop = false    /*Toggle conroller Hard Drop  */
 
-        this.reset()
+        this.spawn()
+        this.state = "paused"
 
         this.update()
 
@@ -248,6 +261,15 @@ class Tetris {
         if (!this.valid(this.active.matrix, this.active.pos)) {
             this.state = "gameover"
         }
+
+        if (!this.valid(this.active.matrix, this.active.pos)) {
+
+            this.music.pause()
+
+            this.state = "gameover"
+        }
+
+
     }
 
     /* ==========================================================
@@ -358,8 +380,12 @@ class Tetris {
         const kicks = this.getKickData(
             type, oldRotation, newRotation)
 
-        if(this.soundEnabled)
-            this.sounds.rotate.play()
+        if (this.soundEnabled) {
+
+            const rotateSound = this.sounds.rotate.cloneNode()
+            rotateSound.volume = 0.7
+            rotateSound.play()
+        }
         
         this.lockTimer = 0
 
@@ -549,8 +575,12 @@ class Tetris {
 
     hardDrop() {
 
-        if(this.soundEnabled)
-            this.sounds.drop.play()
+        if (this.soundEnabled) {
+
+            const rotateSound = this.sounds.drop.cloneNode()
+            rotateSound.volume = 0.7
+            rotateSound.play()
+        }
 
         while (this.valid(this.active.matrix,
             { x: this.active.pos.x, y: this.active.pos.y + 1 })) {
@@ -1130,6 +1160,11 @@ class Tetris {
 
     reset() {
 
+        if (this.soundEnabled) {
+            this.music.currentTime = 0
+            this.music.play()
+        }
+
         this.board = this.createMatrix(this.COLS, this.ROWS)
         this.score = 0
         this.lines = 0
@@ -1153,10 +1188,17 @@ class Tetris {
     }
 
     togglePause() {
-        if (this.state === "running")
+
+        if (this.state === "running") {
+
             this.state = "paused"
-        else if (this.state === "paused")
+            this.music.pause()
+
+        } else if (this.state === "paused") {
+
             this.state = "running"
+            if (this.soundEnabled) this.music.play()
+        }
     }
 
 
@@ -1337,13 +1379,26 @@ class Tetris {
             }
         */
 
-        document.getElementById("start-button")
-            .onclick = () => {
-                if (this.state === "gameover")
-                    this.reset()
-                else
-                    this.togglePause()
-            }  
+        document.getElementById("start-button").onclick = () => {
+
+            if (this.state === "stopped") {
+
+                this.reset()
+
+                if (this.soundEnabled) this.music.play()
+
+                return
+            }
+
+            if (this.state === "gameover") {
+
+                this.reset()
+                this.music.play()
+                return
+            }
+
+            this.togglePause()
+        }
 
         document.getElementById("left-button")
             .onclick = () => {
