@@ -33,11 +33,16 @@ class Tetris {
         this.holdCanvas = document.getElementById("holdCanvas")
         this.holdCtx = this.holdCanvas.getContext("2d")
 
-        this.miniGrid = document.querySelector('.mini-grid')
-        this.miniSquares = Array.from(this.miniGrid.querySelectorAll('div'))
-
         this.scoreEl = document.getElementById("score")
         this.levelEl = document.getElementById("level")
+
+        this.miniGrid = document.querySelector('.mini-grid')
+        this.miniGrid.innerHTML = ""
+        for (let i = 0; i < 80; i++) {
+            const div = document.createElement("div")
+            this.miniGrid.appendChild(div)
+        }
+        this.miniSquares = Array.from(this.miniGrid.querySelectorAll('div'))
 
         /* ==========================================================
            COMBO SYSTEM
@@ -156,8 +161,8 @@ class Tetris {
         this.lastTime = 0
         this.dropCounter = 0
         this.moveIntervals = {}
-        this.DAS = 1000  // delay before auto movement begins
-        this.ARR = 1000    // repeat rate (higher = slower movement)
+        this.DAS = 140  // delay before auto movement begins
+        this.ARR = 30   // repeat rate (higher = slower movement)
         this.keyTimers = {}
         this.renderY = 0         // Smooth piece falling
         this.bag = []
@@ -268,7 +273,6 @@ class Tetris {
 
             this.state = "gameover"
         }
-
 
     }
 
@@ -388,6 +392,7 @@ class Tetris {
         }
         
         this.lockTimer = 0
+        this.lockDelay = 500
 
         for (let [x,y] of kicks) {
             if (this.valid(rotated, {
@@ -527,40 +532,16 @@ class Tetris {
        DROP LOGIC
        ========================================================== */
 
-    /*  (WORKING DROP FUNCTION)  */
     drop() {
 
         this.active.pos.y++
-        this.renderY = this.active.pos.y - 1
+        this.renderY = this.active.pos.y
 
         if (!this.valid(this.active.matrix, this.active.pos)) {
 
             this.active.pos.y--
 
-            /* Piece has touched the ground */
-            this.isGrounded = true
-        }
-        else {
-
-            /* Piece moved successfully */
-            this.isGrounded = false
-            this.lockTimer = 0
-        }
-
-        this.dropCounter = 0
-    }
-
-    /*  NOT WORKING REMOVE COMMENT BEFORE PROMPT
-    drop() {
-
-        this.active.pos.y++
-
-        if (!this.valid(this.active.matrix, this.active.pos)) {
-
-            this.active.pos.y--
-
-            /* piece is now grounded */
-    /*        if (!this.isGrounded) {
+            if (!this.isGrounded) {
                 this.isGrounded = true
                 this.lockTimer = 0
             }
@@ -568,10 +549,11 @@ class Tetris {
         } else {
 
             this.isGrounded = false
+            this.lockTimer = 0
         }
 
         this.dropCounter = 0
-    }                               */
+    }                     
 
     hardDrop() {
 
@@ -816,7 +798,7 @@ class Tetris {
        ========================================================== */
 
     fillNextQueue() {
-        while (this.nextQueue.length < 3) {
+        while (this.nextQueue.length < 5) {
             this.nextQueue.push(this.nextPiece())
         }
     }
@@ -834,33 +816,35 @@ class Tetris {
 
     drawNextPreview() {
 
-        // FULL reset of all mini squares
+        // Clear preview grid
         this.miniSquares.forEach(square => {
             square.style.backgroundColor = "transparent"
             square.style.border = "none"
         })
 
-        const type = this.nextQueue[0]
-        if (!type) return
+        const previewPieces = this.nextQueue.slice(0,5)
 
-        const matrix = this.createPiece(type)
+        previewPieces.forEach((type, pieceIndex) => {
 
-        matrix.forEach((row, y) => {
-            row.forEach((value, x) => {
+            const matrix = this.createPiece(type)
 
-                if (value !== 0) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
 
-                    const index = y * 4 + x
+                    if (value !== 0) {
 
-                    if (this.miniSquares[index]) {
+                        const index = (pieceIndex * 16) + (y * 4 + x)
 
-                        this.miniSquares[index].style.backgroundColor =
-                            this.colors[type]
+                        if (this.miniSquares[index]) {
 
-                        this.miniSquares[index].style.border =
-                            "1px solid #222"
+                            this.miniSquares[index].style.backgroundColor =
+                                this.colors[type]
+
+                            this.miniSquares[index].style.border =
+                                "1px solid #222"
+                        }
                     }
-                }
+                })
             })
         })
     }
@@ -981,35 +965,24 @@ class Tetris {
             }) 
 
         if (this.state === "gameover") {
+
             this.ctx.fillStyle = "rgba(0,0,0,0.7)"
             this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height)
 
-            if(this.soundEnabled)
+            if (!this.gameOverSoundPlayed && this.soundEnabled) {
+
+                this.music.pause()
+
+                this.sounds.gameover.currentTime = 0
                 this.sounds.gameover.play()
 
-        /*      NOT WORKING REMOVE COMMENT BEFORE PROMPT 
-            if (this.state === "gameover") {
-
-                if (!this.gameOverSoundPlayed && this.soundEnabled) {
-
-                    this.music.pause()
-
-                    this.sounds.gameover.currentTime = 0
-                    this.sounds.gameover.play()
-
-                    this.gameOverSoundPlayed = true
-                }
-            }   */
-
-            if (this.state === "gameover" && !this.highScoreSaved) {
-                this.saveHighScore()
-                this.highScoreSaved = true
+                this.gameOverSoundPlayed = true
             }
 
             this.ctx.fillStyle = "#FFF"
             this.ctx.font = "30px Arial"
             this.ctx.fillText("GAME OVER", 40, 300)
-        }   
+        }
     } 
 
     drawHold() {
@@ -1077,6 +1050,14 @@ class Tetris {
 
             if (this.dropCounter > currentInterval)
                 this.drop()
+        }
+
+        const fallSpeed = 0.35
+
+        if (this.renderY < this.active.pos.y) {
+            this.renderY += fallSpeed
+            if (this.renderY > this.active.pos.y)
+                this.renderY = this.active.pos.y
         }
 
         if (this.spawnAnim > 0) {
@@ -1165,6 +1146,7 @@ class Tetris {
             this.music.play()
         }
 
+        this.gameOverSoundPlayed = false
         this.board = this.createMatrix(this.COLS, this.ROWS)
         this.score = 0
         this.lines = 0
@@ -1211,6 +1193,12 @@ class Tetris {
 
             document.getElementById("mute-button").innerText =
                 this.soundEnabled ? "🔊" : "🔇"
+
+            if (this.soundEnabled) {
+                if (this.state === "running") this.music.play()
+            } else {
+                this.music.pause()
+            }
         }
 
         /* ==========================================================
@@ -1536,43 +1524,48 @@ class Tetris {
         ANALOG STICK MOVEMENT
         ============================== */
 
-        if (gp.axes[0] < -deadZone) {
-            this.startMove(-1)
-        } 
-        else if (this.moveIntervals[-1]) {
+        const controllerARR = 120        // repeat rate (higher = slower movement)
+        const controllerDAS = 140        // delay before auto movement begins
 
+        if (gp.axes[0] < -deadZone) {
+            this.startMove(-1, controllerDAS, controllerARR)
+        }
+        else if (this.moveIntervals[-1]) {
             clearTimeout(this.moveIntervals[-1])
             clearInterval(this.moveIntervals[-1])
             delete this.moveIntervals[-1]
         }
 
         if (gp.axes[0] > deadZone) {
-            this.startMove(1)
-        } 
+            this.startMove(1, controllerDAS, controllerARR)
+        }
         else if (this.moveIntervals[1]) {
-
             clearTimeout(this.moveIntervals[1])
             clearInterval(this.moveIntervals[1])
             delete this.moveIntervals[1]
-        }
-
-        /* ==========================================================
-           CONTROLLER MOVEMENT SPEED CONTROL
-           ========================================================== */
-
-        const controllerARR = 1000     // repeat rate (higher = slower movement)
-        const controllerDAS = 1000      // delay before auto movement begins
-
-        if (gp.axes[0] < -deadZone) {
-            this.startMove(-1, controllerDAS, controllerARR)
         }
 
         /* ==============================
         D-PAD MOVEMENT
         ============================== */
 
-        if (gp.buttons[14].pressed) this.startMove(-1)
-        if (gp.buttons[15].pressed) this.startMove(1)
+        if (gp.buttons[14].pressed) {
+            this.startMove(-1, controllerDAS, controllerARR)
+        }
+        else if (this.moveIntervals[-1]) {
+            clearTimeout(this.moveIntervals[-1])
+            clearInterval(this.moveIntervals[-1])
+            delete this.moveIntervals[-1]
+        }
+
+        if (gp.buttons[15].pressed) {
+            this.startMove(1, controllerDAS, controllerARR)
+        }
+        else if (this.moveIntervals[1]) {
+            clearTimeout(this.moveIntervals[1])
+            clearInterval(this.moveIntervals[1])
+            delete this.moveIntervals[1]
+        }
 
         /* ==========================================================
         STOP CONTROLLER MOVEMENT CLEANLY
@@ -1586,14 +1579,6 @@ class Tetris {
             clearInterval(this.moveIntervals[-1])
 
             delete this.moveIntervals[-1]
-        }
-
-        if (!gp.buttons[15].pressed && this.moveIntervals[1]) {
-
-            clearTimeout(this.moveIntervals[1])
-            clearInterval(this.moveIntervals[1])
-
-            delete this.moveIntervals[1]
         }
 
         /* ==========================================================
